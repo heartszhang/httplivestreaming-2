@@ -27,10 +27,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{60a7a85f-0e4f-4e03-8914-1310de5967f4}</ProjectGuid>
+    <ProjectGuid>{6B6246D9-FAF2-403D-A98E-8147D695D5A1}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>Demo</ProjectName>
-    <RootNamespace>Demo</RootNamespace>
+    <ProjectName>demo.dot</ProjectName>
+    <RootNamespace>demo.dot</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
@@ -201,7 +201,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="Demo.idl" />
+    <Midl Include="demo.dot.idl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

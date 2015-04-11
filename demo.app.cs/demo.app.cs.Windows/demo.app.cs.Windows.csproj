@@ -105,13 +105,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
-    <ProjectReference Include="..\..\demo.schemehandler.cx\demo.schemehandler.cx.vcxproj">
-      <Project>{33d5d737-3f43-4a34-ac66-2e4da6a20651}</Project>
-      <Name>demo.schemehandler.cx</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\demo.schemehandler.win\demo.schemehandler.win.vcxproj">
-      <Project>{040402fc-06d8-4b3d-aac3-798902f750e0}</Project>
-      <Name>demo.schemehandler.win</Name>
+    <ProjectReference Include="..\..\demo.dot\demo.dot.vcxproj">
+      <Project>{6b6246d9-faf2-403d-a98e-8147d695d5a1}</Project>
+      <Name>demo.dot</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\demo\demo.vcxproj">
       <Project>{60a7a85f-0e4f-4e03-8914-1310de5967f4}</Project>

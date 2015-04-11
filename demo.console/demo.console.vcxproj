@@ -155,12 +155,6 @@
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\demo.schemehandler.cx\demo.schemehandler.cx.vcxproj">
-      <Project>{33d5d737-3f43-4a34-ac66-2e4da6a20651}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\demo.schemehandler.win\demo.schemehandler.win.vcxproj">
-      <Project>{040402fc-06d8-4b3d-aac3-798902f750e0}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\demo\demo.vcxproj">
       <Project>{60a7a85f-0e4f-4e03-8914-1310de5967f4}</Project>
     </ProjectReference>
