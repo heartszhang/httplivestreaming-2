@@ -113,10 +113,6 @@
       <Project>{040402fc-06d8-4b3d-aac3-798902f750e0}</Project>
       <Name>demo.schemehandler.win</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\DemoMix\DemoMix.vcxproj">
-      <Project>{04d7a9cc-1855-4b20-8536-7fb0233e18cf}</Project>
-      <Name>DemoMix</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\demo\demo.vcxproj">
       <Project>{60a7a85f-0e4f-4e03-8914-1310de5967f4}</Project>
       <Name>Demo</Name>

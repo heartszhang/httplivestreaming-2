@@ -1,11 +1,13 @@
 ﻿// dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
-#include <wrl\module.h>
 
+#include <wrl\module.h>
+#if 0
 extern "C" __declspec( dllexport ) BOOL WINAPI DllMain( _In_opt_ HINSTANCE, DWORD, _In_opt_ LPVOID );
 extern "C" HRESULT WINAPI DllCanUnloadNow();  // __declspec(dllexport) will result redifination error
 extern "C" __declspec( dllexport ) HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING, _Deref_out_ IActivationFactory** );
 extern "C" HRESULT WINAPI DllGetClassObject( REFCLSID, REFIID, _Deref_out_ LPVOID* );
+
 
 BOOL __declspec( dllexport ) APIENTRY DllMain( HMODULE /* hModule */, DWORD ul_reason_for_call, LPVOID /* lpReserved */ )
 {
@@ -40,4 +42,5 @@ extern "C" HRESULT WINAPI DllGetClassObject( _In_ REFCLSID rclsid, _In_ REFIID r
 #elif defined(_M_ARM) || defined(_M_AMD64)
 #pragma comment(linker, "/EXPORT:DllCanUnloadNow,PRIVATE")
 #pragma comment(linker, "/EXPORT:DllGetClassObject,PRIVATE")
+#endif
 #endif

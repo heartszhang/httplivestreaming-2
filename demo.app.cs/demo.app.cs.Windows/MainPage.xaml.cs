@@ -30,8 +30,6 @@ namespace demo.app.cs
             this.InitializeComponent();
             var d = new Demo.Dummy();
             var x = d.Hello(1,2);
-            var t = new DemoMix.Dummy();
-            t.Hello();
         }
     }
 }

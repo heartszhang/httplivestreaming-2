@@ -111,6 +111,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
+    <CustomBuildAfterTargets>BuildLink</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
@@ -163,13 +164,24 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <CompileAsWinRT>false</CompileAsWinRT>
+      <CompileAsWinRT>true</CompileAsWinRT>
+      <PreprocessorDefinitions>_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <Midl />
+    <CustomBuildStep>
+      <Command>mdmerge -partial -i “$(OutDir).” -o “$(OutDir)Output” -metadata_dir “$(WindowsSDK_MetadataPath)” &amp;&amp; robocopy /TIMFIX /R:0 /NS /NC /NFL /NDL /NP /NJH /NJS /COPY:DT /DCOPY:T $(OutDir)Output $(OutDir) $(TargetName).winmd
+IF %ERRORLEVEL% LEQ 3 exit 0</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Merging cx winmd with idl winmd</Message>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>$(OutDir)%(TargetName).winmd;%(outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -183,11 +195,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DemoCx.h" />
     <ClInclude Include="DemoMix.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DemoCx.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="DemoMix.cpp" />
     <ClCompile Include="pch.cpp">
@@ -200,7 +214,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="DemoMix.idl" />
+    <Midl Include="DemoMix.idl">
+      <MetadataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).idl.winmd</MetadataFileName>
+    </Midl>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
