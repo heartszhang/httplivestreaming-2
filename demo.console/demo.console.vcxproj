@@ -110,6 +110,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -159,6 +160,9 @@
     </ProjectReference>
     <ProjectReference Include="..\demo.schemehandler.win\demo.schemehandler.win.vcxproj">
       <Project>{040402fc-06d8-4b3d-aac3-798902f750e0}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\demo\demo.vcxproj">
+      <Project>{60a7a85f-0e4f-4e03-8914-1310de5967f4}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -12,11 +12,7 @@ using namespace Microsoft::WRL::Wrappers;
 
 int main( Platform::Array<Platform::String^>^ args ) {
   Platform::Details::Console::WriteLine( "Hello World" );
-  auto c = ref new demo_schemehandler_win::Class1();
-  c->Hello();
-  c = nullptr;
-  //  auto x = ref new demo_schemehandler_cx::Class2();
   ComPtr<IUnknown> un;
-  auto hr = Windows::Foundation::ActivateInstance( HStringReference( L"demo_schemehandler_win.Class1" ).Get(), &un );
+  auto hr = Windows::Foundation::ActivateInstance( HStringReference( L"Demo.Dummy" ).Get(), &un );
   return 0;
 }
