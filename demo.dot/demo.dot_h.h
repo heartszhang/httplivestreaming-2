@@ -4,10 +4,10 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Tue Apr 14 18:13:11 2015
+/* at Tue Apr 14 21:22:40 2015
  */
-/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\demo.dot.idl-bd4227e7:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.00.0603 
+/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\demo.dot.idl-32e1b6f2:
+    Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.00.0603 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
     VC __declspec() decoration level: 
@@ -75,6 +75,7 @@ namespace ABI {
 /* header files for imported files */
 #include "inspectable.h"
 #include "Windows.Foundation.h"
+#include "Windows.Media.h"
 
 #ifdef __cplusplus
 extern "C"{
@@ -94,6 +95,7 @@ class Dummy;
 } /*demo*/
 }
 #endif
+
 #if !defined(____x_ABI_Cdemo_Cdot_CIDummy_INTERFACE_DEFINED__)
 extern const __declspec(selectany) _Null_terminated_ WCHAR InterfaceName_demo_dot_IDummy[] = L"demo.dot.IDummy";
 #endif /* !defined(____x_ABI_Cdemo_Cdot_CIDummy_INTERFACE_DEFINED__) */
@@ -101,6 +103,7 @@ extern const __declspec(selectany) _Null_terminated_ WCHAR InterfaceName_demo_do
 
 /* interface __MIDL_itf_demo2Edot_0000_0000 */
 /* [local] */ 
+
 
 
 

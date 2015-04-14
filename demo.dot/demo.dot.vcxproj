@@ -198,6 +198,9 @@
       <Outputs>$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)\$(ProjectName).winmd;%(Outputs)</Outputs>
       <Command>mdmerge -metadata_dir "$(WindowsSDK_MetadataPath)" -o "$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)" -i "$(MSBuildProjectDirectory)" -v -partial</Command>
     </CustomBuildStep>
+    <Midl>
+      <MetadataFileName />
+    </Midl>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
