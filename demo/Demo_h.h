@@ -4,9 +4,9 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Sat Apr 11 12:00:41 2015
+/* at Wed Apr 15 17:17:45 2015
  */
-/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\Demo.idl-a03e22b6:
+/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\Demo.idl-2080eb0f:
     Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.00.0603 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 

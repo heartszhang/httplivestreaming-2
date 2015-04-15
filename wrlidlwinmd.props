@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <Midl>
+      <MetadataFileName>$(MSBuildProjectDirectory)\%(Filename).winmd</MetadataFileName>
+    </Midl>
+    <CustomBuild>
+      <Command>mdmerge -metadata_dir "$(WindowsSDK_MetadataPath)" -o "$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)" -i "$(MSBuildProjectDirectory)" -v -partial</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Message>https://github.com/lucas-j/libmpeg2-winrt/issues/7</Message>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>$(OutDir)$(ProjectName).winmd;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuildStep>
+      <Command>mdmerge -metadata_dir "$(WindowsSDK_MetadataPath)" -o "$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName)" -i "$(MSBuildProjectDirectory)" -v -partial</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>https://github.com/lucas-j/libmpeg2-winrt/issues/7</Message>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>$(OutDir)$(ProjectName).winmd;%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
