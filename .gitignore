@@ -6,6 +6,10 @@
 *.user
 *.userosscache
 *.sln.docstates
+*_g.h
+*_g.cpp
+*_h.h
+*.winmd
 
 # Build results
 [Dd]ebug/
