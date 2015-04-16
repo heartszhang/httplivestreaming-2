@@ -13,8 +13,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 HRESULT
 CMediaTypeDumper::PropVariantToString(
-    __in PROPVARIANT varPropVal, 
-    __in LPWSTR pwszPropName,  
+    __in PROPVARIANT varPropVal,
+    __in LPWSTR pwszPropName,
     __out LPWSTR pwszPropVal)
 {
     HRESULT hr = S_OK;
@@ -25,10 +25,10 @@ CMediaTypeDumper::PropVariantToString(
         if (0 == wcscmp(L"MF_MT_FRAME_SIZE", pwszPropName))
         {
             StringCchPrintf(
-                pwszPropVal, 
-                MAX_LEN_ONELINE, 
-                L"%lux%lu", 
-                mfRatio.Numerator, 
+                pwszPropVal,
+                MAX_LEN_ONELINE,
+                L"%lux%lu",
+                mfRatio.Numerator,
                 mfRatio.Denominator);
         }
         else if (0 == wcscmp(L"MF_MT_FRAME_RATE", pwszPropName))
@@ -36,42 +36,42 @@ CMediaTypeDumper::PropVariantToString(
             if (0 != mfRatio.Denominator)
             {
                 StringCchPrintf(
-                    pwszPropVal, 
-                    MAX_LEN_ONELINE, 
-                    L"%3.5ffps", 
+                    pwszPropVal,
+                    MAX_LEN_ONELINE,
+                    L"%3.5ffps",
                     (float)mfRatio.Numerator / (float)mfRatio.Denominator);
             }
             else
             {
                 StringCchPrintf(
-                    pwszPropVal, 
-                    MAX_LEN_ONELINE, 
-                    L"%lu/%lu", 
-                    mfRatio.Numerator, 
+                    pwszPropVal,
+                    MAX_LEN_ONELINE,
+                    L"%lu/%lu",
+                    mfRatio.Numerator,
                     mfRatio.Denominator);
             }
         }
         else if (0 == wcscmp(L"MF_MT_PIXEL_ASPECT_RATIO", pwszPropName))
         {
             StringCchPrintf(
-                pwszPropVal, 
-                MAX_LEN_ONELINE, 
-                L"%lu:%lu", 
-                mfRatio.Numerator, 
+                pwszPropVal,
+                MAX_LEN_ONELINE,
+                L"%lu:%lu",
+                mfRatio.Numerator,
                 mfRatio.Denominator);
         }
-        else if (0 == wcscmp(L"MF_PD_DURATION", pwszPropName) || 
-            0 == wcscmp(L"MF_PD_ASF_FILEPROPERTIES_PLAY_DURATION", pwszPropName) || 
+        else if (0 == wcscmp(L"MF_PD_DURATION", pwszPropName) ||
+            0 == wcscmp(L"MF_PD_ASF_FILEPROPERTIES_PLAY_DURATION", pwszPropName) ||
             0 == wcscmp(L"MF_PD_ASF_FILEPROPERTIES_SEND_DURATION", pwszPropName))
         {
             CHECK_HR(hr = CDumperHelper::TimeToString(
-                varPropVal.uhVal, 
+                varPropVal.uhVal,
                 pwszPropVal));
         }
         else
         {
             CHECK_HR(hr = CDumperHelper::PropVariantToString(
-                varPropVal, 
+                varPropVal,
                 pwszPropVal));
         }
     }
@@ -79,17 +79,17 @@ CMediaTypeDumper::PropVariantToString(
     {
         WCHAR pwszValGUID[MAX_LEN_ONELINE] = L"";
         CHECK_HR(hr = CDumperHelper::MFGUIDToString(
-            *(varPropVal.puuid), 
+            *(varPropVal.puuid),
             pwszValGUID));
         StringCchPrintf(
-            pwszPropVal, 
-            MAX_LEN_ONELINE, 
-            L"%ls", 
+            pwszPropVal,
+            MAX_LEN_ONELINE,
+            L"%ls",
             pwszValGUID);
     }
     else if ((VT_VECTOR | VT_UI1) == varPropVal.vt)
     {
-        if (0 == wcscmp(L"MF_PD_ASF_FILEPROPERTIES_CREATION_TIME", pwszPropName) || 
+        if (0 == wcscmp(L"MF_PD_ASF_FILEPROPERTIES_CREATION_TIME", pwszPropName) ||
             0 == wcscmp(L"MF_PD_LAST_MODIFIED_TIME", pwszPropName))
         {
             ULARGE_INTEGER ul = *(ULARGE_INTEGER *)(varPropVal.caub.pElems);
@@ -97,13 +97,13 @@ CMediaTypeDumper::PropVariantToString(
             ft.dwHighDateTime = ul.HighPart;
             ft.dwLowDateTime = ul.LowPart;
             CHECK_HR(hr = CDumperHelper::FileTimeToString(
-                &ft, 
+                &ft,
                 pwszPropVal));
         }
         else
         {
             CHECK_HR(hr = CDumperHelper::HexToString(
-                varPropVal, 
+                varPropVal,
                 pwszPropVal));
         }
     }
@@ -112,32 +112,32 @@ CMediaTypeDumper::PropVariantToString(
         if (0 == wcscmp(L"MF_MT_INTERLACE_MODE", pwszPropName))
         {
             CHECK_HR(CDumperHelper::VideoInterlaceModeToString(
-                (MFVideoInterlaceMode)varPropVal.ulVal, 
+                (MFVideoInterlaceMode)varPropVal.ulVal,
                 pwszPropVal));
         }
         else if (0 == wcscmp(L"MF_MT_MPEG2_LEVEL", pwszPropName))
         {
             CHECK_HR(CDumperHelper::MPEG2LevelToString(
-                (eAVEncH264VLevel)varPropVal.ulVal, 
+                (eAVEncH264VLevel)varPropVal.ulVal,
                 pwszPropVal));
         }
         else if (0 == wcscmp(L"MF_MT_MPEG2_PROFILE", pwszPropName))
         {
             CHECK_HR(CDumperHelper::MPEG2ProfileToString(
-                (eAVEncH264VProfile)varPropVal.ulVal, 
+                (eAVEncH264VProfile)varPropVal.ulVal,
                 pwszPropVal));
         }
         else
         {
             CHECK_HR(hr = CDumperHelper::PropVariantToString(
-                varPropVal, 
+                varPropVal,
                 pwszPropVal));
         }
     }
     else
     {
         CHECK_HR(hr = CDumperHelper::PropVariantToString(
-            varPropVal, 
+            varPropVal,
             pwszPropVal));
     }
 
@@ -165,13 +165,13 @@ CMediaTypeDumper::Dump(
     if (NULL != pPD)
     {
         CDumperHelper::PrintColor(
-            COLOR_LIGHTBLUE, 
+            COLOR_LIGHTBLUE,
             L"Container attributes:\r\n");
         CHECK_HR(hr = PrintMFAttributes(pPD));
         CHECK_HR(hr = pPD->GetStreamDescriptorCount(&cStreams));
         CDumperHelper::PrintColor(
-            COLOR_LIGHTBLUE, 
-            L"Media content has %d stream(s)\r\n", 
+            COLOR_LIGHTBLUE,
+            L"Media content has %d stream(s)\r\n",
             cStreams);
         for (DWORD i = 0; i < cStreams; i++)
         {
@@ -187,16 +187,16 @@ CMediaTypeDumper::Dump(
                 CHECK_HR(hr = pPD->SelectStream(i));
             }
             CDumperHelper::PrintColor(
-                COLOR_LIGHTBLUE, 
-                L"    Stream #%d attributes:\r\n", 
+                COLOR_LIGHTBLUE,
+                L"    Stream #%d attributes:\r\n",
                 i);
             CHECK_HR(hr = PrintMFAttributes(pSD));
             CHECK_HR(hr = pSD->GetMediaTypeHandler(&pMTH));
             CHECK_HR(hr = pMTH->GetMediaTypeCount(&cMTCount));
             CDumperHelper::PrintColor(
-                COLOR_LIGHTBLUE, 
-                L"    Stream #%d has %d media type(s)\r\n", 
-                i, 
+                COLOR_LIGHTBLUE,
+                L"    Stream #%d has %d media type(s)\r\n",
+                i,
                 cMTCount);
             for (DWORD j = 0; j < cMTCount; j++)
             {
@@ -205,7 +205,7 @@ CMediaTypeDumper::Dump(
                 CHECK_HR(hr = pMTH->GetMediaTypeByIndex(j, &pMTWrapper));
                 pMTWrapper->GetMajorType(&guidMajorType);
 
-                // For protected content media type needs to be unwrapped to 
+                // For protected content media type needs to be unwrapped to
                 // be readable
                 if (MFMediaType_Protected == guidMajorType)
                 {
@@ -218,8 +218,8 @@ CMediaTypeDumper::Dump(
                 }
 
                 CDumperHelper::PrintColor(
-                    COLOR_LIGHTBLUE, 
-                    L"    Media type #%d:\r\n", 
+                    COLOR_LIGHTBLUE,
+                    L"    Media type #%d:\r\n",
                     j);
                 CHECK_HR(hr = PrintMFAttributes(pMT));
             }
@@ -237,12 +237,12 @@ done:
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-HRESULT 
+HRESULT
 CMediaTypeDumper::PrintMFAttributes(
     __in IMFAttributes *pAttrs)
 {
     HRESULT hr = S_OK;
-    
+
     GUID itemGUID = GUID_NULL;
     PROPVARIANT varValue;
     WCHAR pwszAttrName[MAX_LEN_ONELINE] = L"";
@@ -265,8 +265,8 @@ CMediaTypeDumper::PrintMFAttributes(
         {
             pwszPropVal[0] = '\0';
         }
-        hr = pAttrs->GetItemByIndex(i, 
-            &itemGUID, 
+        hr = pAttrs->GetItemByIndex(i,
+            &itemGUID,
             &varValue);
         if (S_OK != hr)
         {
@@ -274,7 +274,7 @@ CMediaTypeDumper::PrintMFAttributes(
         }
 
         hr = CDumperHelper::MFGUIDToString(
-            itemGUID, 
+            itemGUID,
             pwszAttrName);
         if (S_OK != hr)
         {
@@ -282,17 +282,17 @@ CMediaTypeDumper::PrintMFAttributes(
         }
 
         hr = PropVariantToString(
-            varValue, 
-            pwszAttrName, 
+            varValue,
+            pwszAttrName,
             pwszPropVal);
         if (S_OK != hr)
         {
             break;
         }
         CDumperHelper::PrintColor(
-            COLOR_DEFAULT, 
-            L"        %ls: %ls\r\n", 
-            pwszAttrName, 
+            COLOR_DEFAULT,
+            L"        %ls: %ls\r\n",
+            pwszAttrName,
             pwszPropVal);
 
     }

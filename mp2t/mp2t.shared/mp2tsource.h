@@ -34,7 +34,6 @@ const UINT32 MAX_STREAMS = 32;
 
 class StreamList sealed
 {
-  Vector<CMPEG1Stream*> streams;
   ComPtr<CMPEG1Stream>  m_streams[MAX_STREAMS];
   BYTE m_id[MAX_STREAMS];
   UINT32 m_count;
