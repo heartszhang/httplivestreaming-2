@@ -10,6 +10,7 @@
 *_g.cpp
 *_h.h
 *.winmd
+*.orig
 
 # Build results
 [Dd]ebug/
