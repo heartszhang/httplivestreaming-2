@@ -6,7 +6,7 @@
 HRESULT Mp2tStream::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkState) {
   HRESULT hr = S_OK;
 
-  LockerLock lock(m_spSource.Get());
+  Locker lock(m_spSource.Get());
 
   hr = CheckShutdown();
 
@@ -20,7 +20,7 @@ HRESULT Mp2tStream::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkSta
 HRESULT Mp2tStream::EndGetEvent(IMFAsyncResult *pResult, IMFMediaEvent **ppEvent) {
   HRESULT hr = S_OK;
 
-  LockerLock lock(m_spSource.Get());
+  Locker lock(m_spSource.Get());
 
   hr = CheckShutdown();
 
@@ -37,7 +37,7 @@ HRESULT Mp2tStream::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent) {
   ComPtr<IMFMediaEventQueue> spQueue;
 
   { // scope for lock
-    LockerLock lock(m_spSource.Get());
+    Locker lock(m_spSource.Get());
 
     // Check shutdown
     hr = CheckShutdown();
@@ -59,7 +59,7 @@ HRESULT Mp2tStream::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent) {
 HRESULT Mp2tStream::QueueEvent(MediaEventType met, REFGUID guidExtendedType, HRESULT hrStatus, const PROPVARIANT *pvValue) {
   HRESULT hr = S_OK;
 
-  LockerLock lock(m_spSource.Get());
+  Locker lock(m_spSource.Get());
 
   hr = CheckShutdown();
 
@@ -72,7 +72,7 @@ HRESULT Mp2tStream::QueueEvent(MediaEventType met, REFGUID guidExtendedType, HRE
 
 // Returns a pointer to the media source.
 HRESULT Mp2tStream::GetMediaSource(IMFMediaSource **ppMediaSource) {
-  LockerLock lock(m_spSource.Get());
+  Locker lock(m_spSource.Get());
 
   if (ppMediaSource == nullptr) {
     return E_POINTER;
@@ -96,7 +96,7 @@ HRESULT Mp2tStream::GetMediaSource(IMFMediaSource **ppMediaSource) {
 
 // Returns a pointer to the stream descriptor for this stream.
 HRESULT Mp2tStream::GetStreamDescriptor(IMFStreamDescriptor **ppStreamDescriptor) {
-  LockerLock lock(m_spSource.Get());
+  Locker lock(m_spSource.Get());
 
   if (ppStreamDescriptor == nullptr) {
     return E_POINTER;
@@ -122,7 +122,7 @@ HRESULT Mp2tStream::RequestSample(IUnknown *pToken) {
   IMFMediaSource *pSource = nullptr;
 
   // Hold the media source object's critical section.
-  LockerLock lock(m_spSource.Get());
+  Locker lock(m_spSource.Get());
 
   hr = CheckShutdown();
   if (FAILED(hr)) {
@@ -354,12 +354,14 @@ void Mp2tStream::DispatchSamples() throw() {
 
       // Notify the source. It will send the end-of-presentation event.
       ThrowIfError(m_spSource->QueueAsyncOperation(SourceOp::OP_END_OF_STREAM));
-    } else if (NeedsData()) {
+    }
+    else if (NeedsData()) {
       // The sample queue is empty; the request queue is not empty; and we
       // have not reached the end of the stream. Ask for more data.
       ThrowIfError(m_spSource->QueueAsyncOperation(SourceOp::OP_REQUEST_DATA));
     }
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     if (m_state != STATE_SHUTDOWN) {
       // An error occurred. Send an MEError even from the source,
       // unless the source is already shut down.

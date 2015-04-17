@@ -31,19 +31,19 @@ void GetStreamMajorType(IMFStreamDescriptor *pSD, GUID *pguidMajorType);
 //-------------------------------------------------------------------
 
 STDMETHODIMP Mp2tSource::Lock() {
-  m_critSec.Lock();
+  m_critSec.lock();
   return S_OK;
 }
 
 STDMETHODIMP Mp2tSource::Unlock() {
-  m_critSec.Unlock();
+  m_critSec.unlock();
   return S_OK;
 }
 
 HRESULT Mp2tSource::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkState) {
   HRESULT hr = S_OK;
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   hr = CheckShutdown();
 
@@ -57,7 +57,7 @@ HRESULT Mp2tSource::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkSta
 HRESULT Mp2tSource::EndGetEvent(IMFAsyncResult *pResult, IMFMediaEvent **ppEvent) {
   HRESULT hr = S_OK;
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   hr = CheckShutdown();
 
@@ -78,7 +78,7 @@ HRESULT Mp2tSource::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent) {
   ComPtr<IMFMediaEventQueue> spQueue;
 
   {
-    AutoLock lock(m_critSec);
+    Locker lock(this);
 
     // Check shutdown
     hr = CheckShutdown();
@@ -100,7 +100,7 @@ HRESULT Mp2tSource::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent) {
 HRESULT Mp2tSource::QueueEvent(MediaEventType met, REFGUID guidExtendedType, HRESULT hrStatus, const PROPVARIANT *pvValue) {
   HRESULT hr = S_OK;
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   hr = CheckShutdown();
 
@@ -129,7 +129,7 @@ HRESULT Mp2tSource::CreatePresentationDescriptor(
 
   HRESULT hr = S_OK;
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   // Fail if the source is shut down.
   hr = CheckShutdown();
@@ -166,7 +166,7 @@ HRESULT Mp2tSource::GetCharacteristics(DWORD *pdwCharacteristics) {
 
   HRESULT hr = S_OK;
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   hr = CheckShutdown();
 
@@ -185,7 +185,7 @@ HRESULT Mp2tSource::GetCharacteristics(DWORD *pdwCharacteristics) {
 //-------------------------------------------------------------------
 
 HRESULT Mp2tSource::Pause() {
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   HRESULT hr = S_OK;
 
@@ -206,7 +206,7 @@ HRESULT Mp2tSource::Pause() {
 //-------------------------------------------------------------------
 
 HRESULT Mp2tSource::Shutdown() {
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   HRESULT hr = S_OK;
 
@@ -257,6 +257,7 @@ HRESULT Mp2tSource::Start(
   ) {
   HRESULT hr = S_OK;
   ComPtr<SourceOp> spAsyncOp;
+  ComPtr<Mp2tSource> me(this);
 
   // Check parameters.
 
@@ -276,7 +277,7 @@ HRESULT Mp2tSource::Start(
     return MF_E_UNSUPPORTED_TIME_FORMAT;
   }
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   // Check if this is a seek request. This sample does not support seeking.
 
@@ -319,8 +320,7 @@ HRESULT Mp2tSource::Start(
   if (FAILED(hr)) {
     goto done;
   }
-
-  hr = QueueOperation(spAsyncOp.Get());
+  hr = Async([me, spAsyncOp](IMFAsyncResult*)->HRESULT { me->DoStart((StartOp*)spAsyncOp.Get()); return S_OK; });
 
 done:
 
@@ -333,7 +333,7 @@ done:
 //-------------------------------------------------------------------
 
 HRESULT Mp2tSource::Stop() {
-  AutoLock lock(m_critSec);
+  Locker lock(this);
 
   HRESULT hr = S_OK;
 
@@ -393,9 +393,10 @@ HRESULT Mp2tSource::SetRate(BOOL fThin, float flRate) {
     return MF_E_UNSUPPORTED_RATE;
   }
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
   HRESULT hr = S_OK;
-  SourceOp *pAsyncOp = nullptr;
+  ComPtr<SourceOp >pAsyncOp;
+  ComPtr<Mp2tSource> me(this);
 
   if (flRate == m_flRate) {
     goto done;
@@ -405,7 +406,7 @@ HRESULT Mp2tSource::SetRate(BOOL fThin, float flRate) {
 
   if (SUCCEEDED(hr)) {
     // Queue asynchronous stop
-    hr = QueueOperation(pAsyncOp);
+    hr = Async([me, pAsyncOp](IMFAsyncResult*)->HRESULT {me->DoSetRate(pAsyncOp.Get()); return S_OK; });
   }
 
 done:
@@ -422,7 +423,7 @@ HRESULT Mp2tSource::GetRate(_Inout_opt_ BOOL *pfThin, _Inout_opt_ float *pflRate
     return E_INVALIDARG;
   }
 
-  AutoLock lock(m_critSec);
+  Locker lock(this);
   *pfThin = FALSE;
   *pflRate = m_flRate;
 
@@ -479,7 +480,8 @@ concurrency::task<void> Mp2tSource::OpenAsync(IMFByteStream *pStream) {
 
   if ((dwCaps & MFBYTESTREAM_IS_SEEKABLE) == 0) {
     ThrowException(MF_E_BYTESTREAM_NOT_SEEKABLE);
-  } else if ((dwCaps & MFBYTESTREAM_IS_READABLE) == 0) {
+  }
+  else if ((dwCaps & MFBYTESTREAM_IS_READABLE) == 0) {
     ThrowException(MF_E_UNSUPPORTED_BYTESTREAM_TYPE);
   }
 
@@ -544,7 +546,8 @@ HRESULT Mp2tSource::OnByteStreamRead(IMFAsyncResult *pResult) {
       if (cbRead == 0) {
         // There is no more data in the stream. Signal end-of-stream.
         EndOfMPEGStream();
-      } else {
+      }
+      else {
         // Update the end-position of the read buffer.
         m_ReadBuffer->MoveEnd(cbRead);
 
@@ -552,7 +555,8 @@ HRESULT Mp2tSource::OnByteStreamRead(IMFAsyncResult *pResult) {
         ParseData();
       }
     }
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     StreamingError(exc->HResult);
   }
 #endif
@@ -562,12 +566,14 @@ HRESULT Mp2tSource::OnByteStreamRead(IMFAsyncResult *pResult) {
 /* Private methods */
 
 Mp2tSource::Mp2tSource() :
-  OpQueue(m_critSec.m_criticalSection),
   m_cRef(1),
   m_state(STATE_INVALID),
   m_cRestartCounter(0),
-  m_OnByteStreamRead(this, &Mp2tSource::OnByteStreamRead),
-  m_flRate(1.0f) {}
+  m_flRate(1.0f) {
+  m_OnByteStreamRead = CreateAsyncCallback([this](IMFAsyncResult*result) ->HRESULT {
+    return this->OnByteStreamRead(result);
+  });
+}
 
 Mp2tSource::~Mp2tSource() {
   if (m_state != STATE_SHUTDOWN) {
@@ -588,7 +594,8 @@ void Mp2tSource::CompleteOpen(HRESULT hrStatus) {
   if (FAILED(hrStatus)) {
     Shutdown();
     //    _openedEvent.set_exception(ref new COMException(hrStatus));
-  } else {
+  }
+  else {
     _openedEvent.set();
   }
 }
@@ -602,7 +609,8 @@ void Mp2tSource::CompleteOpen(HRESULT hrStatus) {
 HRESULT Mp2tSource::IsInitialized() const {
   if (m_state == STATE_OPENING || m_state == STATE_INVALID) {
     return MF_E_NOT_INITIALIZED;
-  } else {
+  }
+  else {
     return S_OK;
   }
 }
@@ -632,13 +640,15 @@ bool Mp2tSource::IsStreamActive(const Mp2tHeader &packetHdr) {
     // The source is still opening.
     // Deliver payloads for every supported stream type.
     return IsStreamTypeSupported(packetHdr.type);
-  } else {
+  }
+  else {
     // The source is already opened. Check if the stream is active.
     auto wpStream = m_streams.Find(packetHdr.stream_id);
 
     if (wpStream == nullptr) {
       return false;
-    } else {
+    }
+    else {
       return wpStream->IsActive();
     }
   }
@@ -720,7 +730,8 @@ void Mp2tSource::InitPresentationDescriptor() {
 
     // Invoke the async callback to complete the BeginOpen operation.
     CompleteOpen(S_OK);
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     error = exc;
   }
 
@@ -750,11 +761,12 @@ void Mp2tSource::InitPresentationDescriptor() {
 HRESULT Mp2tSource::QueueAsyncOperation(SourceOp::Operation OpType) {
   HRESULT hr = S_OK;
   ComPtr<SourceOp> spOp;
+  ComPtr<Mp2tSource> me(this);
 
   hr = SourceOp::CreateOp(OpType, &spOp);
 
   if (SUCCEEDED(hr)) {
-    hr = QueueOperation(spOp.Get());
+    hr = Async([me, spOp](IMFAsyncResult*)->HRESULT {me->DispatchOperation(spOp.Get()); return S_OK; });
   }
   return hr;
 }
@@ -869,7 +881,8 @@ HRESULT Mp2tSource::DispatchOperation(SourceOp *pOp) {
     default:
       ThrowException(E_UNEXPECTED);
     }
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     StreamingError(exc->HResult);
   }
 #endif
@@ -941,7 +954,8 @@ void Mp2tSource::DoStart(StartOp *pOp) {
       S_OK,
       &pOp->Data()
       ));
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     // Failure. Send the error code to the application.
 
     // Note: It's possible that QueueEvent itself failed, in which case it
@@ -997,7 +1011,8 @@ void Mp2tSource::DoStop(SourceOp *pOp) {
 
     // Send the "stopped" event. This might include a failure code.
     (void)m_spEventQueue->QueueEventParamVar(MESourceStopped, GUID_NULL, S_OK, nullptr);
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     m_spSampleRequest.Reset();
 
     m_state = STATE_STOPPED;
@@ -1040,7 +1055,8 @@ void Mp2tSource::DoPause(SourceOp *pOp) {
 
     // Send the "paused" event. This might include a failure code.
     (void)m_spEventQueue->QueueEventParamVar(MESourcePaused, GUID_NULL, S_OK, nullptr);
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     // Send the "paused" event. This might include a failure code.
     (void)m_spEventQueue->QueueEventParamVar(MESourcePaused, GUID_NULL, exc->HResult, nullptr);
 
@@ -1074,7 +1090,8 @@ void Mp2tSource::DoSetRate(SourceOp *pOp) {
     m_flRate = pSetRateOp->GetRate();
 
     (void)m_spEventQueue->QueueEventParamVar(MESourceRateChanged, GUID_NULL, S_OK, nullptr);
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     // Send the "rate changted" event. This might include a failure code.
     (void)m_spEventQueue->QueueEventParamVar(MESourceRateChanged, GUID_NULL, exc->HResult, nullptr);
 
@@ -1121,7 +1138,8 @@ void Mp2tSource::OnStreamRequestSample(SourceOp *pOp) {
       // Try to parse data - this will invoke a read request if needed.
       ParseData();
     }
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     CompleteAsyncOp(pOp);
     throw;
   }
@@ -1153,7 +1171,8 @@ void Mp2tSource::OnEndOfStream(SourceOp *pOp) {
       // No more streams. Send the end-of-presentation event.
       ThrowIfError(m_spEventQueue->QueueEventParamVar(MEEndOfPresentation, GUID_NULL, S_OK, nullptr));
     }
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     CompleteAsyncOp(pOp);
 
     throw;
@@ -1267,10 +1286,12 @@ void Mp2tSource::ParseData() {
     if (m_parser->IsEndOfStream) {
       // The parser reached the end of the MPEG-1 stream. Notify the streams.
       EndOfMPEGStream();
-    } else if (m_parser->HasPacket) {
+    }
+    else if (m_parser->HasPacket) {
       // The parser reached the start of a new packet.
       fNeedMoreData = !ReadPayload(&cbAte, &cbNextRequest);
-    } else {
+    }
+    else {
       // Parse more data.
       fNeedMoreData = !m_parser->ParseBytes(m_ReadBuffer->DataPtr, m_ReadBuffer->DataSize, &cbAte);
     }
@@ -1342,14 +1363,16 @@ bool Mp2tSource::ReadPayload(DWORD *pcbAte, DWORD *pcbNextRequest) {
 
     // Tell the parser that we are done with this packet.
     m_parser->ClearPacket();
-  } else if (cbPayloadUnread > 0) {
+  }
+  else if (cbPayloadUnread > 0) {
     // Some portion of this payload has not been read. Schedule a read.
     *pcbNextRequest = cbPayloadUnread;
 
     *pcbAte = 0;
 
     fResult = false; // Need more data.
-  } else {
+  }
+  else {
     // The entire payload is in the data buffer. Deliver the packet.
     DeliverPayload();
 
@@ -1584,7 +1607,8 @@ HRESULT Mp2tSource::ValidatePresentationDescriptor(IMFPresentationDescriptor *pP
     if (!fSelected) {
       throw ref new InvalidArgumentException();
     }
-  } catch (Exception ^exc) {
+  }
+  catch (Exception ^exc) {
     return exc->HResult;
   }
 #endif
@@ -1604,7 +1628,8 @@ void Mp2tSource::StreamingError(HRESULT hr) {
     // Invoke the callback with the status code.
 
     CompleteOpen(hr);
-  } else if (m_state != STATE_SHUTDOWN) {
+  }
+  else if (m_state != STATE_SHUTDOWN) {
     // An error occurred during streaming. Send the MEError event
     // to notify the pipeline.
 
@@ -1616,7 +1641,8 @@ bool Mp2tSource::IsRateSupported(float flRate, float *pflAdjustedRate) {
   if (flRate < 0.00001f && flRate > -0.00001f) {
     *pflAdjustedRate = 0.0f;
     return true;
-  } else if (flRate < 1.0001f && flRate > 0.9999f) {
+  }
+  else if (flRate < 1.0001f && flRate > 0.9999f) {
     *pflAdjustedRate = 1.0f;
     return true;
   }

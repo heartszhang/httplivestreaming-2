@@ -1,12 +1,9 @@
 // -*- C++ -*-
 #pragma once
 // Common sample files.
-#include "linklist.h"
-
-#include "asynccb.h"
-#include "opqueue.h"
-#include "critsec.h"
 #include "mp2t.h"
+
+#include "opqueue.h"
 // Forward declares
 namespace ABI { namespace mp2t { class Mp2tByteStreamHandler; } }
 
@@ -83,24 +80,12 @@ private:
   BOOL m_fThin;
   float m_flRate;
 };
-//[Guid("DEC79B79-E78D-4D4A-9398-C522B3476FB0")]
-struct __declspec(uuid("DEC79B79-E78D-4D4A-9398-C522B3476FB0")) __declspec(novtable) ISourceLocker : IUnknown {
-  virtual HRESULT STDMETHODCALLTYPE Lock() = 0;
-  virtual HRESULT STDMETHODCALLTYPE Unlock() = 0;
-};
-
-struct LockerLock {
-  ComPtr<ISourceLocker> locker;
-  LockerLock(ComPtr<ISourceLocker> locker) :locker(locker) { locker->Lock(); }
-  ~LockerLock() { locker->Unlock(); }
-};
 // CMPEG1Source: The media source object.
 class Mp2tSource : public RuntimeClass<RuntimeClassFlags<ClassicCom>
   , IMFMediaSource
   , IMFGetService
   //  , IMFMediaEventGenerator
-  , IMFRateControl, ISourceLocker>,
-  public OpQueue<Mp2tSource, SourceOp> {
+  , IMFRateControl, ISourceLocker> {
 public:// ISourceLocker
   STDMETHODIMP Lock();
   STDMETHODIMP Unlock();
@@ -190,7 +175,7 @@ private:
 private:
   long                        m_cRef;                     // reference count
 
-  CritSec                     m_critSec;                  // critical section for thread safety
+  ::Lock                     m_critSec;                  // critical section for thread safety
   SourceState                 m_state;                    // Current state (running, stopped, paused)
 
 //  Buffer                      ^m_ReadBuffer;
@@ -212,7 +197,7 @@ private:
   ComPtr<SourceOp>            m_spSampleRequest;
 
   // Async callback helper.
-  AsyncCallback<Mp2tSource>  m_OnByteStreamRead;
+  ComPtr<IMFAsyncCallback>  m_OnByteStreamRead;
 
   float                       m_flRate;
 };

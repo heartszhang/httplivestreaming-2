@@ -5,25 +5,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tsource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstream.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\asynccb.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\critsec.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\extensionsdefs.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\linklist.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\opqueue.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\videobufferlock.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2t.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)opqueue.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -34,6 +17,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2t.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)asynccb.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">

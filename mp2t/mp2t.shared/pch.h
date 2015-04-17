@@ -15,16 +15,14 @@
 #include <objidl.h>
 #include <new>
 
-#include <wrl\client.h>
-#include <wrl\implements.h>
-#include <wrl\ftm.h>
-#include <wrl\event.h>
-#include <wrl\wrappers\corewrappers.h>
+#include <wrl/client.h>
+#include <wrl/implements.h>
+#include <wrl/ftm.h>
+#include <wrl/event.h>
+#include <wrl/wrappers/corewrappers.h>
 #include <windows.media.h>
 
 #include <ppltasks.h>
-
-#include <ExtensionsDefs.h>
 
 //using namespace Platform;
 using namespace Microsoft::WRL;

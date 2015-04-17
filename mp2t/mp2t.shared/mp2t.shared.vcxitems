@@ -13,19 +13,15 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\asynccb.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\critsec.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\extensionsdefs.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\linklist.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\opqueue.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\common\videobufferlock.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2t.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tsource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)opqueue.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)asynccb.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2t.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.cpp" />
