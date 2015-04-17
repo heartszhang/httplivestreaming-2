@@ -33,6 +33,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstream.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)mp2t.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">

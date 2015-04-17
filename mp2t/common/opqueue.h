@@ -1,4 +1,3 @@
-
 #pragma once
 
 #pragma warning( push )
@@ -40,10 +39,7 @@
     asynchronous calls before the object dispatches the next operation on
     the queue.
 
-
 */
-
-
 
 //-------------------------------------------------------------------
 // OpQueue class template
@@ -86,36 +82,29 @@ template <class T, class TOperation>
 class OpQueue //: public IUnknown
 {
 public:
+  using OpVector = ComVector<TOperation>;
 
-    typedef ComPtrList<TOperation>   OpList;
-
-    HRESULT QueueOperation(TOperation *pOp);
-
-protected:
-
-    HRESULT ProcessQueue();
-    HRESULT ProcessQueueAsync(IMFAsyncResult *pResult);
-
-    virtual HRESULT DispatchOperation(TOperation *pOp) = 0;
-    virtual HRESULT ValidateOperation(TOperation *pOp) = 0;
-
-    OpQueue(CRITICAL_SECTION& critsec)
-        : m_OnProcessQueue(static_cast<T *>(this), &OpQueue::ProcessQueueAsync),
-          m_critsec(critsec)
-    {
-    }
-
-    virtual ~OpQueue()
-    {
-    }
+  HRESULT QueueOperation(TOperation *pOp);
 
 protected:
-    OpList                  m_OpQueue;         // Queue of operations.
-    CRITICAL_SECTION&       m_critsec;         // Protects the queue state.
-    AsyncCallback<T>  m_OnProcessQueue;  // ProcessQueueAsync callback.
+
+  HRESULT ProcessQueue();
+  HRESULT ProcessQueueAsync(IMFAsyncResult *pResult);
+
+  virtual HRESULT DispatchOperation(TOperation *pOp) = 0;
+  virtual HRESULT ValidateOperation(TOperation *pOp) = 0;
+
+  OpQueue(CRITICAL_SECTION& critsec)
+    : m_OnProcessQueue(static_cast<T *>(this), &OpQueue::ProcessQueueAsync),
+    m_critsec(critsec) {}
+
+  virtual ~OpQueue() {}
+
+protected:
+  OpVector                  m_OpQueue;         // Queue of operations.
+  CRITICAL_SECTION&       m_critsec;         // Protects the queue state.
+  AsyncCallback<T>  m_OnProcessQueue;  // ProcessQueueAsync callback.
 };
-
-
 
 //-------------------------------------------------------------------
 // Place an operation on the queue.
@@ -123,22 +112,17 @@ protected:
 //-------------------------------------------------------------------
 
 template <class T, class TOperation>
-HRESULT OpQueue<T, TOperation>::QueueOperation(TOperation *pOp)
-{
-    HRESULT hr = S_OK;
+HRESULT OpQueue<T, TOperation>::QueueOperation(TOperation *pOp) {
+  HRESULT hr = S_OK;
 
-    EnterCriticalSection(&m_critsec);
+  EnterCriticalSection(&m_critsec);
 
-    hr = m_OpQueue.InsertBack(pOp);
-    if (SUCCEEDED(hr))
-    {
-        hr = ProcessQueue();
-    }
+  m_OpQueue.push_back(ComPtr<TOperation>(pOp));
+  hr = ProcessQueue();
 
-    LeaveCriticalSection(&m_critsec);
-    return hr;
+  LeaveCriticalSection(&m_critsec);
+  return hr;
 }
-
 
 //-------------------------------------------------------------------
 // Process the next operation on the queue.
@@ -148,21 +132,18 @@ HRESULT OpQueue<T, TOperation>::QueueOperation(TOperation *pOp)
 //-------------------------------------------------------------------
 
 template <class T, class TOperation>
-HRESULT OpQueue<T, TOperation>::ProcessQueue()
-{
-    HRESULT hr = S_OK;
-    if (m_OpQueue.GetCount() > 0)
-    {
-        hr = MFPutWorkItem2(
-            MFASYNC_CALLBACK_QUEUE_STANDARD,    // Use the standard work queue.
-            0,                                  // Default priority
-            &m_OnProcessQueue,                  // Callback method.
-            nullptr                             // State object.
-            );
-    }
-    return hr;
+HRESULT OpQueue<T, TOperation>::ProcessQueue() {
+  HRESULT hr = S_OK;
+  if (m_OpQueue.GetCount() > 0) {
+    hr = MFPutWorkItem2(
+      MFASYNC_CALLBACK_QUEUE_STANDARD,    // Use the standard work queue.
+      0,                                  // Default priority
+      &m_OnProcessQueue,                  // Callback method.
+      nullptr                             // State object.
+      );
+  }
+  return hr;
 }
-
 
 //-------------------------------------------------------------------
 // Process the next operation on the queue.
@@ -172,38 +153,29 @@ HRESULT OpQueue<T, TOperation>::ProcessQueue()
 //-------------------------------------------------------------------
 
 template <class T, class TOperation>
-HRESULT OpQueue<T, TOperation>::ProcessQueueAsync(IMFAsyncResult *pResult)
-{
-    HRESULT hr = S_OK;
-    TOperation *pOp = nullptr;
+HRESULT OpQueue<T, TOperation>::ProcessQueueAsync(IMFAsyncResult *pResult) {
+  HRESULT hr = S_OK;
+  ComPtr<TOperation> pOp;
 
-    EnterCriticalSection(&m_critsec);
+  EnterCriticalSection(&m_critsec);
 
-    if (m_OpQueue.GetCount() > 0)
-    {
-        hr = m_OpQueue.GetFront(&pOp);
+  if (!m_OpQueue.empty()) {
+    pOp = m_OpQueue.front();
 
-        if (SUCCEEDED(hr))
-        {
-            hr = ValidateOperation(pOp);
-        }
-        if (SUCCEEDED(hr))
-        {
-            hr = m_OpQueue.RemoveFront(nullptr);
-        }
-        if (SUCCEEDED(hr))
-        {
-            (void)DispatchOperation(pOp);
-        }
+    hr = ValidateOperation(pOp);
+
+    if (SUCCEEDED(hr)) {
+      m_OpQueue.erase(m_OpQueue.begin());
+      (void)DispatchOperation(pOp);
     }
+  }
 
-    if (pOp != nullptr)
-    {
-        pOp->Release();
-    }
+  if (pOp != nullptr) {
+    pOp->Release();
+  }
 
-    LeaveCriticalSection(&m_critsec);
-    return hr;
+  LeaveCriticalSection(&m_critsec);
+  return hr;
 }
 
 #pragma warning( pop )

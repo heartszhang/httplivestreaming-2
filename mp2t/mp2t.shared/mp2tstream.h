@@ -1,5 +1,4 @@
 #pragma once
-
 class Mp2tSource;
 
 // The media stream object., IMFMediaEventGenerator
@@ -56,8 +55,8 @@ private:
   bool                m_fActive;              // Is the stream active?
   bool                m_fEOS;                 // Did the source reach the end of the stream?
 
-  SampleList          m_Samples;              // Samples waiting to be delivered.
-  TokenList           m_Requests;             // Sample requests, waiting to be dispatched.
+  SampleVector          m_Samples;              // Samples waiting to be delivered.
+  TokenVector           m_Requests;             // Sample requests, waiting to be dispatched.
 
   float               m_flRate;
 };

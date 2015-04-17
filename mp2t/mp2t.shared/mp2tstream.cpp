@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "mp2tsource.h"
+#include "mp2tstream.h"
 
 // For remarks, see mp2tsource.cpp
 HRESULT Mp2tStream::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkState) {
@@ -139,17 +140,14 @@ HRESULT Mp2tStream::RequestSample(IUnknown *pToken) {
     goto done;
   }
 
-  if (m_fEOS && m_Samples.IsEmpty()) {
+  if (m_fEOS && m_Samples.empty()) {
     // This stream has already reached the end of the stream, and the
     // sample queue is empty.
     hr = MF_E_END_OF_STREAM;
     goto done;
   }
 
-  hr = m_Requests.InsertBack(pToken);
-  if (FAILED(hr)) {
-    goto done;
-  }
+  m_Requests.push_back(pToken);
 
   // Dispatch the request.
   DispatchSamples();
@@ -205,8 +203,8 @@ void Mp2tStream::Activate(bool fActive) {
   m_fActive = fActive;
 
   if (!fActive) {
-    m_Samples.Clear();
-    m_Requests.Clear();
+    m_Samples.clear();
+    m_Requests.clear();
   }
 }
 
@@ -280,8 +278,8 @@ void Mp2tStream::Shutdown() {
     }
 
     // Release objects.
-    m_Samples.Clear();
-    m_Requests.Clear();
+    m_Samples.clear();
+    m_Requests.clear();
 
     m_spStreamDescriptor.Reset();
     m_spEventQueue.Reset();
@@ -303,7 +301,7 @@ bool Mp2tStream::NeedsData() {
   // Note: The stream tries to keep a minimum number of samples
   // queued ahead.
 
-  return (m_fActive && !m_fEOS && (m_Samples.GetCount() < SAMPLE_QUEUE));
+  return (m_fActive && !m_fEOS && (m_Samples.size() < SAMPLE_QUEUE));
 }
 
 // Delivers a sample to the stream.

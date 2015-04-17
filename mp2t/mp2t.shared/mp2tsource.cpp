@@ -634,7 +634,7 @@ bool Mp2tSource::IsStreamActive(const Mp2tHeader &packetHdr) {
     return IsStreamTypeSupported(packetHdr.type);
   } else {
     // The source is already opened. Check if the stream is active.
-    Mp2tStream *wpStream = m_streams.Find(packetHdr.stream_id);
+    auto wpStream = m_streams.Find(packetHdr.stream_id);
 
     if (wpStream == nullptr) {
       return false;

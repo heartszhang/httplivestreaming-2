@@ -27,6 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)mp2t.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tsource.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstream.cpp" />

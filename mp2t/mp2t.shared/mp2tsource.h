@@ -14,18 +14,6 @@ class Mp2tSource;
 class Mp2tStream;
 class SourceOp;
 
-typedef ComPtrList<IMFSample>       SampleList;
-typedef ComPtrList<IUnknown, true>  TokenList;    // List of tokens for IMFMediaStream::RequestSample
-
-enum SourceState {
-  STATE_INVALID,      // Initial state. Have not started opening the stream.
-  STATE_OPENING,      // BeginOpen is in progress.
-  STATE_STOPPED,
-  STATE_PAUSED,
-  STATE_STARTED,
-  STATE_SHUTDOWN
-};
-
 //#include "mp2tparse.h"          // MPEG-1 parser
 #include "mp2tstream.h"    // MPEG-1 stream
 

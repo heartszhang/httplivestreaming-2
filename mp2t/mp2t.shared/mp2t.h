@@ -1,4 +1,5 @@
 #pragma once
+#include <linklist.h>
 #include <vector>
 #include <cassert>
 enum StreamType {
@@ -6,79 +7,33 @@ enum StreamType {
   StreamType_Video,
   StreamType_Audio
 };
+enum SourceState {
+  STATE_INVALID,      // Initial state. Have not started opening the stream.
+  STATE_OPENING,      // BeginOpen is in progress.
+  STATE_STOPPED,
+  STATE_PAUSED,
+  STATE_STARTED,
+  STATE_SHUTDOWN
+};
+
 class Mp2tStream;
 
 class StreamVector {
-  const static DWORD    MAX_STREAMS = 32;
-  //  ComPtr<Mp2tStream>    streams[MAX_STREAMS];
-//  BYTE                  ids[MAX_STREAMS];
-//  DWORD                 count = 0;
   std::vector<ComPtr<Mp2tStream>> streams;
   std::vector<BYTE>               ids;
 public:
-  ~StreamVector() {
-    Clear();
-  }
-  size_t GetCount()const { return streams.size(); }
-  void Clear() {
-    streams.clear();
-    for (DWORD i = 0; i < MAX_STREAMS; i++) {
-      streams[i].Reset();
-    }
-    //    count = 0;
-  }
+  ~StreamVector();
+  size_t GetCount()const;
+  void Clear();
 
-  HRESULT AddStream(BYTE id, Mp2tStream *pStream) {
-    streams.push_back(ComPtr<Mp2tStream>(pStream));
-    //streams[count] = pStream;
-    //ids[count] = id;
-    ids.push_back(id);
-    //++count;
+  HRESULT AddStream(BYTE id, Mp2tStream *pStream);
+  ComPtr<Mp2tStream> Find(BYTE id)const;
 
-    return S_OK;
-  }
-
-  ComPtr<Mp2tStream> Find(BYTE id) {
-    // This method can return nullptr if the source did not create a
-    // stream for this ID. In particular, this can happen if:
-    //
-    // 1) The stream type is not supported. See IsStreamTypeSupported().
-    // 2) The source is still opening.
-    //
-    // Note: This method does not AddRef the stream object. The source
-    // uses this method to access the streams. If the source hands out
-    // a stream pointer (e.g. in the MENewStream event), the source
-    // must AddRef the stream object.
-    for (auto i = 0; i < streams.size(); i++) {
-      if (ids[i] == id) {
-        return streams[i];
-      }
-    }
-    return ComPtr<Mp2tStream>();
-    /*
-    Mp2tStream *pStream = nullptr;
-    for (UINT32 i = 0; i < count; i++) {
-      if (ids[i] == id) {
-        pStream = streams[i].Get();
-        break;
-      }
-    }
-    return pStream;
-    */
-  }
-
-  // Accessor.
-  ComPtr<Mp2tStream> operator[](DWORD index) {
-    assert(index < count);
-    return streams[index].Get();
-  }
-
-  // Const accessor.
-  Mp2tStream *const operator[](DWORD index) const {
-    assert(index < count);
-    return streams[index].Get();
-  }
+  ComPtr<Mp2tStream>& operator[](DWORD index);
+  const ComPtr<Mp2tStream>& operator[](DWORD index) const;
 };
+using SampleVector = ComVector<IMFSample>;
+using TokenVector = ComVector<IUnknown>;
 
 struct Mp2tHeader {
   BYTE          stream_id = 0;
