@@ -1,14 +1,4 @@
 #pragma once
-inline void ThrowIfError(HRESULT hr)
-{
-    if (FAILED(hr))
-    {
-        throw ref new Platform::COMException(hr);
-    }
-}
 
-inline void ThrowException(HRESULT hr)
-{
-    assert(FAILED(hr));
-    throw ref new Platform::COMException(hr);
-}
+inline bool ok(HRESULT hr) { return SUCCEEDED(hr); }
+inline bool failed(HRESULT hr) { return FAILED(hr); }

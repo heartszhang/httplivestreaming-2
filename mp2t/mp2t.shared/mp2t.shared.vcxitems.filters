@@ -5,7 +5,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tsource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstream.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)mp2tparse.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\common\asynccb.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -24,6 +23,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\common\videobufferlock.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)mp2t.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -32,7 +32,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tsource.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstream.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)mp2tparse.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">

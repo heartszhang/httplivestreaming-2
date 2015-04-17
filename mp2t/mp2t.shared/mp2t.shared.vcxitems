@@ -19,17 +19,17 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\common\linklist.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\common\opqueue.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\common\videobufferlock.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)mp2t.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tsource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)mp2tstream.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)mp2tparse.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dllmain.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstreamhandler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tsource.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)mp2tstream.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)mp2tparse.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

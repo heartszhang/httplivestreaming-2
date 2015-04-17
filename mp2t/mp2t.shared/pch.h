@@ -26,6 +26,6 @@
 
 #include <ExtensionsDefs.h>
 
-using namespace Platform;
+//using namespace Platform;
 using namespace Microsoft::WRL;
 using namespace Microsoft::WRL::Wrappers;

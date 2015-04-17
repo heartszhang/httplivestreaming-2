@@ -2,19 +2,13 @@
 
 class Mp2tSource;
 
-// The media stream object.
-class CMPEG1Stream : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFMediaStream>
-{
+// The media stream object., IMFMediaEventGenerator
+class Mp2tStream : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFMediaStream> {
 public:
 
-  CMPEG1Stream(Mp2tSource *pSource, IMFStreamDescriptor *pSD);
-  ~CMPEG1Stream();
+  Mp2tStream(Mp2tSource *pSource, IMFStreamDescriptor *pSD);
+  ~Mp2tStream();
   void Initialize();
-
-  // IUnknown
-  STDMETHODIMP QueryInterface(REFIID iid, void **ppv);
-  STDMETHODIMP_(ULONG) AddRef();
-  STDMETHODIMP_(ULONG) Release();
 
   // IMFMediaEventGenerator
   STDMETHODIMP BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkState);
@@ -46,8 +40,7 @@ public:
 
 private:
 
-  HRESULT CheckShutdown() const
-  {
+  HRESULT CheckShutdown() const {
     return (m_state == STATE_SHUTDOWN ? MF_E_SHUTDOWN : S_OK);
   }
   void DispatchSamples() throw();

@@ -1,3 +1,17 @@
+//////////////////////////////////////////////////////////////////////////
+//
+// Parse.h
+// MPEG-1 parsing code.
+//
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+//////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 
@@ -77,10 +91,10 @@ struct MPEG1SystemHeader
     DWORD   cbSize;     // Size of this structure, including the streams array.
     DWORD   rateBound;
     BYTE    cAudioBound;
-    bool    bFixed;
-    bool    bCSPS;
-    bool    bAudioLock;
-    bool    bVideoLock;
+    BOOL    bFixed;
+    BOOL    bCSPS;
+    BOOL    bAudioLock;
+    BOOL    bVideoLock;
     BYTE    cVideoBound;
     DWORD   cStreams;
     MPEG1StreamHeader streams[1];   // Array of 1 or more stream headers.
@@ -93,7 +107,7 @@ struct MPEG1PacketHeader
     BYTE        number;         // Index within the stream type (audio 0, audio 1, etc)
     DWORD       cbPacketSize;   // Size of the entire packet (header + payload).
     DWORD       cbPayload;      // Size of the packet payload (packet size - header size).
-    bool        bHasPTS;        // Did the packet header contain a Presentation Time Stamp (PTS)?
+    BOOL        bHasPTS;        // Did the packet header contain a Presentation Time Stamp (PTS)?
     LONGLONG    PTS;            // Presentation Time Stamp (in 90 kHz clock)
 };
 
@@ -107,7 +121,7 @@ struct MPEG1VideoSeqHeader
     MFRatio     frameRate;
     DWORD       bitRate;
     WORD        cbVBV_Buffer;
-    bool        bConstrained;
+    BOOL        bConstrained;
     DWORD       cbHeader;
     BYTE        header[MPEG1_VIDEO_SEQ_HEADER_MAX_SIZE];    // Raw header.
 };
@@ -140,7 +154,8 @@ enum MPEG1AudioFlags
     MPEG1_AUDIO_PROTECTION_BIT = 0x08,  // = ACM_MPEG_PROTECTIONBIT
 };
 
-struct  MPEG1AudioFrameHeader
+
+struct MPEG1AudioFrameHeader
 {
     MPEG1AudioLayer     layer;
     DWORD               dwBitRate;        // Bit rate in Kbits / sec
@@ -153,128 +168,99 @@ struct  MPEG1AudioFrameHeader
     WORD                wFlags;    // bitwise OR of MPEG1AudioFlags
 };
 
-// ExpandableStruct class:
-// Class which wraps a structure which can be expanded by additional data.
-template<typename T>
-ref class ExpandableStruct sealed
-{
-internal:
-    ExpandableStruct(unsigned int size)
-        : m_array(ref new Array<BYTE>(size))
-    {
-        ZeroMemory(m_array->Data, m_array->Length);
-    }
-
-    ExpandableStruct(const ExpandableStruct<T> ^src)
-        : m_array(ref new Array<BYTE>(src->Size))
-    {
-        CopyFrom(src);
-    }
-
-    property unsigned int Size {unsigned int get() const { return m_array->Length; }}
-    T *Get() const { return reinterpret_cast<T*>(m_array->Data); }
-    void CopyFrom(const ExpandableStruct<T> ^src)
-    {
-        if (src->Size != Size)
-        {
-            throw ref new InvalidArgumentException();
-        }
-
-        CopyMemory(Get(), src->Get(), Size);
-    }
-
-private:
-    Array<BYTE> ^m_array;
-};
-
 
 // Buffer class:
 // Resizable buffer used to hold the MPEG-1 data.
 
-ref class Buffer sealed
+class Buffer
 {
-internal:
-    Buffer(DWORD cbSize);
+public:
+    Buffer();
+    ~Buffer()
+    {
+        delete [] m_pArray;
+    }
     HRESULT Initalize(DWORD cbSize);
 
-    property BYTE *DataPtr { BYTE *get(); }
-    property DWORD DataSize { DWORD get() const; }
+    BYTE*   DataPtr();
+    DWORD   DataSize() const;
 
     // Reserve: Reserves cb bytes of free data in the buffer.
     // The reserved bytes start at DataPtr() + DataSize().
-    void Reserve(DWORD cb);
+    HRESULT Reserve(DWORD cb);
 
     // MoveStart: Moves the front of the buffer.
     // Call this method after consuming data from the buffer.
-    void MoveStart(DWORD cb);
+    HRESULT MoveStart(DWORD cb);
 
     // MoveEnd: Moves the end of the buffer.
     // Call this method after reading data into the buffer.
-    void MoveEnd(DWORD cb);
+    HRESULT MoveEnd(DWORD cb);
 
 private:
-    property BYTE *Ptr { BYTE *get() { return m_array->Data; } }
+    BYTE* Ptr() { return m_pArray; }
 
-    void SetSize(DWORD count);
-    void Allocate(DWORD alloc);
+    HRESULT SetSize(DWORD count);
+    HRESULT Allocate(DWORD alloc);
 
-    property DWORD  CurrentFreeSize { DWORD get() const; }
+    DWORD   CurrentFreeSize() const;
 
 private:
 
-    Array<BYTE> ^m_array;
-    DWORD m_count;        // Nominal count.
-    DWORD m_allocated;    // Actual allocation size.
+    BYTE       *m_pArray;
+    DWORD   m_count;        // Nominal count.
+    DWORD   m_allocated;    // Actual allocation size.
 
-    DWORD m_begin;
-    DWORD m_end;  // 1 past the last element
+    DWORD   m_begin;
+    DWORD   m_end;  // 1 past the last element
 };
 
 
 // Parser class:
 // Parses an MPEG-1 systems-layer stream.
-ref class Parser sealed
+class Parser
 {
-internal:
+public:
+
     Parser();
+    ~Parser();
 
-    bool ParseBytes(const BYTE *pData, DWORD cbLen, DWORD *pAte);
+    HRESULT ParseBytes(const BYTE *pData, DWORD cbLen, DWORD *pAte);
 
-    property bool HasSystemHeader{bool get() const { return m_header != nullptr; }}
-    ExpandableStruct<MPEG1SystemHeader> ^GetSystemHeader();
+    BOOL    HasSystemHeader() const { return m_pHeader != NULL; }
+    HRESULT GetSystemHeader(MPEG1SystemHeader **ppHeader);
 
-    property bool HasPacket {bool get() const { return m_bHasPacketHeader; }}
-    property const MPEG1PacketHeader &PacketHeader { const MPEG1PacketHeader &get() { assert(m_bHasPacketHeader); return m_curPacketHeader; } }
+    BOOL    HasPacket() const { return m_bHasPacketHeader; }
+    const MPEG1PacketHeader& PacketHeader() { assert(m_bHasPacketHeader); return m_curPacketHeader; }
 
-    property DWORD PayloadSize{DWORD get() const { assert(m_bHasPacketHeader); return m_curPacketHeader.cbPayload; }}
-    void ClearPacket() { m_bHasPacketHeader = false; }
+    DWORD   PayloadSize() const { assert(m_bHasPacketHeader); return m_curPacketHeader.cbPayload; }
+    void    ClearPacket() { m_bHasPacketHeader = FALSE; }
 
-    property bool IsEndOfStream {bool get() const { return m_bEOS; }}
-
-private:
-
-    bool FindNextStartCode(const BYTE *pData, DWORD cbLen, DWORD *pAte);
-    bool ParsePackHeader(const BYTE *pData, DWORD cbLen, DWORD *pAte);
-    bool ParseSystemHeader(const BYTE *pData, DWORD cbLen, DWORD *pAte);
-    bool ParsePacketHeader(const BYTE *pData, DWORD cbLen, DWORD *pAte);
-    void OnEndOfStream();
+    BOOL    IsEndOfStream() const { return m_bEOS; }
 
 private:
 
-    LONGLONG m_SCR;
-    DWORD m_muxRate;
-    Array<BYTE> ^m_data;
+    HRESULT FindNextStartCode(const BYTE *pData, DWORD cbLen, DWORD *pAte);
+    HRESULT ParsePackHeader(const BYTE *pData, DWORD cbLen, DWORD *pAte);
+    HRESULT ParseSystemHeader(const BYTE *pData, DWORD cbLen, DWORD *pAte);
+    HRESULT ParsePacketHeader(const BYTE *pData, DWORD cbLen, DWORD *pAte);
+    HRESULT OnEndOfStream();
 
-    ExpandableStruct<MPEG1SystemHeader> ^m_header;
+private:
+
+    LONGLONG            m_SCR;
+    DWORD               m_muxRate;
+
+    MPEG1SystemHeader   *m_pHeader;
     // Note: Size of header = sizeof(MPEG1SystemHeader) + (sizeof(MPEG1StreamHeader) * (cStreams - 1))
 
-    bool m_bHasPacketHeader;
-    MPEG1PacketHeader m_curPacketHeader;  // Most recent packet header.
+    BOOL                m_bHasPacketHeader;
+    MPEG1PacketHeader   m_curPacketHeader;  // Most recent packet header.
 
-    bool m_bEOS;
+    BOOL                m_bEOS;
 };
 
 
-DWORD ReadVideoSequenceHeader(_In_reads_bytes_(cbData) const BYTE *pData, DWORD cbData, MPEG1VideoSeqHeader &seqHeader);
+HRESULT ReadVideoSequenceHeader(_In_reads_bytes_(cbData) const BYTE *pData, DWORD cbData, MPEG1VideoSeqHeader& seqHeader, _Out_ DWORD *pAte);
 
-DWORD ReadAudioFrameHeader(const BYTE *pData, DWORD cbData, MPEG1AudioFrameHeader &audioHeader);
+HRESULT ReadAudioFrameHeader(const BYTE *pData, DWORD cbData, MPEG1AudioFrameHeader& audioHeader, DWORD *pAte);

@@ -1,90 +1,36 @@
 #include "pch.h"
 #include "mp2tsource.h"
 
-#pragma warning( push )
-#pragma warning( disable : 4355 )  // 'this' used in base member initializer list
-
-/* Public class methods */
-
-//-------------------------------------------------------------------
-// IUnknown methods
-//-------------------------------------------------------------------
-
-ULONG CMPEG1Stream::AddRef()
-{
-  return _InterlockedIncrement(&m_cRef);
-}
-
-ULONG CMPEG1Stream::Release()
-{
-  LONG cRef = _InterlockedDecrement(&m_cRef);
-  if (cRef == 0)
-  {
-    delete this;
-  }
-  return cRef;
-}
-
-HRESULT CMPEG1Stream::QueryInterface(REFIID riid, void **ppv)
-{
-  if (ppv == nullptr)
-  {
-    return E_POINTER;
-  }
-
-  HRESULT hr = E_NOINTERFACE;
-  if (riid == IID_IUnknown ||
-    riid == IID_IMFMediaEventGenerator ||
-    riid == IID_IMFMediaStream)
-  {
-    (*ppv) = static_cast<IMFMediaStream *>(this);
-    AddRef();
-    hr = S_OK;
-  }
-
-  return hr;
-}
-
-//-------------------------------------------------------------------
-// IMFMediaEventGenerator methods
-//
-// For remarks, see MPEG1Source.cpp
-//-------------------------------------------------------------------
-
-HRESULT CMPEG1Stream::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkState)
-{
+// For remarks, see mp2tsource.cpp
+HRESULT Mp2tStream::BeginGetEvent(IMFAsyncCallback *pCallback, IUnknown *punkState) {
   HRESULT hr = S_OK;
 
   LockerLock lock(m_spSource.Get());
 
   hr = CheckShutdown();
 
-  if (SUCCEEDED(hr))
-  {
+  if (SUCCEEDED(hr)) {
     hr = m_spEventQueue->BeginGetEvent(pCallback, punkState);
   }
 
   return hr;
 }
 
-HRESULT CMPEG1Stream::EndGetEvent(IMFAsyncResult *pResult, IMFMediaEvent **ppEvent)
-{
+HRESULT Mp2tStream::EndGetEvent(IMFAsyncResult *pResult, IMFMediaEvent **ppEvent) {
   HRESULT hr = S_OK;
 
   LockerLock lock(m_spSource.Get());
 
   hr = CheckShutdown();
 
-  if (SUCCEEDED(hr))
-  {
+  if (SUCCEEDED(hr)) {
     hr = m_spEventQueue->EndGetEvent(pResult, ppEvent);
   }
 
   return hr;
 }
 
-HRESULT CMPEG1Stream::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent)
-{
+HRESULT Mp2tStream::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent) {
   HRESULT hr = S_OK;
 
   ComPtr<IMFMediaEventQueue> spQueue;
@@ -96,57 +42,42 @@ HRESULT CMPEG1Stream::GetEvent(DWORD dwFlags, IMFMediaEvent **ppEvent)
     hr = CheckShutdown();
 
     // Cache a local pointer to the queue.
-    if (SUCCEEDED(hr))
-    {
+    if (SUCCEEDED(hr)) {
       spQueue = m_spEventQueue.Get();
     }
   }   // release lock
 
   // Use the local pointer to call GetEvent.
-  if (SUCCEEDED(hr))
-  {
+  if (SUCCEEDED(hr)) {
     hr = spQueue->GetEvent(dwFlags, ppEvent);
   }
 
   return hr;
 }
 
-HRESULT CMPEG1Stream::QueueEvent(MediaEventType met, REFGUID guidExtendedType, HRESULT hrStatus, const PROPVARIANT *pvValue)
-{
+HRESULT Mp2tStream::QueueEvent(MediaEventType met, REFGUID guidExtendedType, HRESULT hrStatus, const PROPVARIANT *pvValue) {
   HRESULT hr = S_OK;
 
   LockerLock lock(m_spSource.Get());
 
   hr = CheckShutdown();
 
-  if (SUCCEEDED(hr))
-  {
+  if (SUCCEEDED(hr)) {
     hr = m_spEventQueue->QueueEventParamVar(met, guidExtendedType, hrStatus, pvValue);
   }
 
   return hr;
 }
 
-//-------------------------------------------------------------------
-// IMFMediaStream methods
-//-------------------------------------------------------------------
-
-//-------------------------------------------------------------------
-// GetMediaSource:
 // Returns a pointer to the media source.
-//-------------------------------------------------------------------
-
-HRESULT CMPEG1Stream::GetMediaSource(IMFMediaSource **ppMediaSource)
-{
+HRESULT Mp2tStream::GetMediaSource(IMFMediaSource **ppMediaSource) {
   LockerLock lock(m_spSource.Get());
 
-  if (ppMediaSource == nullptr)
-  {
+  if (ppMediaSource == nullptr) {
     return E_POINTER;
   }
 
-  if (m_spSource == nullptr)
-  {
+  if (m_spSource == nullptr) {
     return E_UNEXPECTED;
   }
 
@@ -156,51 +87,36 @@ HRESULT CMPEG1Stream::GetMediaSource(IMFMediaSource **ppMediaSource)
 
   // QI the source for IMFMediaSource.
   // (Does not hold the source's critical section.)
-  if (SUCCEEDED(hr))
-  {
+  if (SUCCEEDED(hr)) {
     hr = m_spSource.CopyTo(IID_PPV_ARGS(ppMediaSource));
   }
   return hr;
 }
 
-//-------------------------------------------------------------------
-// GetStreamDescriptor:
 // Returns a pointer to the stream descriptor for this stream.
-//-------------------------------------------------------------------
-
-HRESULT CMPEG1Stream::GetStreamDescriptor(IMFStreamDescriptor **ppStreamDescriptor)
-{
+HRESULT Mp2tStream::GetStreamDescriptor(IMFStreamDescriptor **ppStreamDescriptor) {
   LockerLock lock(m_spSource.Get());
 
-  if (ppStreamDescriptor == nullptr)
-  {
+  if (ppStreamDescriptor == nullptr) {
     return E_POINTER;
   }
 
-  if (m_spStreamDescriptor == nullptr)
-  {
+  if (m_spStreamDescriptor == nullptr) {
     return E_UNEXPECTED;
   }
 
   HRESULT hr = CheckShutdown();
 
-  if (SUCCEEDED(hr))
-  {
+  if (SUCCEEDED(hr)) {
     *ppStreamDescriptor = m_spStreamDescriptor.Get();
     (*ppStreamDescriptor)->AddRef();
   };
   return hr;
 }
 
-//-------------------------------------------------------------------
-// RequestSample:
 // Requests data from the stream.
-//
 // pToken: Token used to track the request. Can be nullptr.
-//-------------------------------------------------------------------
-
-HRESULT CMPEG1Stream::RequestSample(IUnknown *pToken)
-{
+HRESULT Mp2tStream::RequestSample(IUnknown *pToken) {
   HRESULT hr = S_OK;
   IMFMediaSource *pSource = nullptr;
 
@@ -208,26 +124,22 @@ HRESULT CMPEG1Stream::RequestSample(IUnknown *pToken)
   LockerLock lock(m_spSource.Get());
 
   hr = CheckShutdown();
-  if (FAILED(hr))
-  {
+  if (FAILED(hr)) {
     goto done;
   }
 
-  if (m_state == STATE_STOPPED)
-  {
+  if (m_state == STATE_STOPPED) {
     hr = MF_E_INVALIDREQUEST;
     goto done;
   }
 
-  if (!m_fActive)
-  {
+  if (!m_fActive) {
     // If the stream is not active, it should not get sample requests.
     hr = MF_E_INVALIDREQUEST;
     goto done;
   }
 
-  if (m_fEOS && m_Samples.IsEmpty())
-  {
+  if (m_fEOS && m_Samples.IsEmpty()) {
     // This stream has already reached the end of the stream, and the
     // sample queue is empty.
     hr = MF_E_END_OF_STREAM;
@@ -235,8 +147,7 @@ HRESULT CMPEG1Stream::RequestSample(IUnknown *pToken)
   }
 
   hr = m_Requests.InsertBack(pToken);
-  if (FAILED(hr))
-  {
+  if (FAILED(hr)) {
     goto done;
   }
 
@@ -244,8 +155,7 @@ HRESULT CMPEG1Stream::RequestSample(IUnknown *pToken)
   DispatchSamples();
 
 done:
-  if (FAILED(hr) && (m_state != STATE_SHUTDOWN))
-  {
+  if (FAILED(hr) && (m_state != STATE_SHUTDOWN)) {
     // An error occurred. Send an MEError even from the source,
     // unless the source is already shut down.
     hr = m_spSource->QueueEvent(MEError, GUID_NULL, hr, nullptr);
@@ -253,22 +163,16 @@ done:
   return hr;
 }
 
-//-------------------------------------------------------------------
-// Public non-interface methods
-//-------------------------------------------------------------------
-
-CMPEG1Stream::CMPEG1Stream(Mp2tSource *pSource, IMFStreamDescriptor *pSD) :
+Mp2tStream::Mp2tStream(Mp2tSource *pSource, IMFStreamDescriptor *pSD) :
   m_cRef(1),
   m_state(STATE_STOPPED),
   m_fActive(false),
   m_fEOS(false),
   m_flRate(1.0f),
   m_spSource(pSource),
-  m_spStreamDescriptor(pSD)
-{
+  m_spStreamDescriptor(pSD) {
   auto module = ::Microsoft::WRL::GetModuleBase();
-  if (module != nullptr)
-  {
+  if (module != nullptr) {
     module->IncrementObjectCount();
   }
 
@@ -276,53 +180,40 @@ CMPEG1Stream::CMPEG1Stream(Mp2tSource *pSource, IMFStreamDescriptor *pSD) :
   assert(pSD != nullptr);
 }
 
-CMPEG1Stream::~CMPEG1Stream()
-{
+Mp2tStream::~Mp2tStream() {
   assert(m_state == STATE_SHUTDOWN);
 
   auto module = ::Microsoft::WRL::GetModuleBase();
-  if (module != nullptr)
-  {
+  if (module != nullptr) {
     module->DecrementObjectCount();
   }
 }
 
-void CMPEG1Stream::Initialize()
-{
+void Mp2tStream::Initialize() {
+#if 0
   // Create the media event queue.
   ThrowIfError(MFCreateEventQueue(&m_spEventQueue));
+#endif
 }
 
-//-------------------------------------------------------------------
-// Activate
 // Activates or deactivates the stream. Called by the media source.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::Activate(bool fActive)
-{
-  if (fActive == m_fActive)
-  {
+void Mp2tStream::Activate(bool fActive) {
+  if (fActive == m_fActive) {
     return;
   }
 
   m_fActive = fActive;
 
-  if (!fActive)
-  {
+  if (!fActive) {
     m_Samples.Clear();
     m_Requests.Clear();
   }
 }
 
-//-------------------------------------------------------------------
-// Start
 // Starts the stream. Called by the media source.
-//
 // varStart: Starting position.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::Start(const PROPVARIANT &varStart)
-{
+void Mp2tStream::Start(const PROPVARIANT &varStart) {
+#if 0
   ThrowIfError(CheckShutdown());
 
   // Queue the stream-started event.
@@ -333,29 +224,23 @@ void CMPEG1Stream::Start(const PROPVARIANT &varStart)
   // If we are restarting from paused, there may be
   // queue sample requests. Dispatch them now.
   DispatchSamples();
+#endif
 }
 
-//-------------------------------------------------------------------
-// Pause
 // Pauses the stream. Called by the media source.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::Pause()
-{
+void Mp2tStream::Pause() {
+#if 0
   ThrowIfError(CheckShutdown());
 
   m_state = STATE_PAUSED;
 
   ThrowIfError(QueueEvent(MEStreamPaused, GUID_NULL, S_OK, nullptr));
+#endif
 }
 
-//-------------------------------------------------------------------
-// Stop
 // Stops the stream. Called by the media source.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::Stop()
-{
+void Mp2tStream::Stop() {
+#if 0
   ThrowIfError(CheckShutdown());
 
   m_Requests.Clear();
@@ -364,47 +249,33 @@ void CMPEG1Stream::Stop()
   m_state = STATE_STOPPED;
 
   ThrowIfError(QueueEvent(MEStreamStopped, GUID_NULL, S_OK, nullptr));
+#endif
 }
 
-//-------------------------------------------------------------------
-// SetRate
 // Sets rate of the stream. Called by the media source.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::SetRate(float flRate)
-{
+void Mp2tStream::SetRate(float flRate) {
+#if 0
   ThrowIfError(CheckShutdown());
 
   m_flRate = flRate;
+#endif
 }
 
-//-------------------------------------------------------------------
-// EndOfStream
 // Notifies the stream that the source reached the end of the MPEG-1
 // stream. For more information, see CMPEG1Source::EndOfMPEGStream().
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::EndOfStream()
-{
+void Mp2tStream::EndOfStream() {
   m_fEOS = true;
 
   DispatchSamples();
 }
 
-//-------------------------------------------------------------------
-// Shutdown
 // Shuts down the stream and releases all resources.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::Shutdown()
-{
-  if (SUCCEEDED(CheckShutdown()))
-  {
+void Mp2tStream::Shutdown() {
+  if (SUCCEEDED(CheckShutdown())) {
     m_state = STATE_SHUTDOWN;
 
     // Shut down the event queue.
-    if (m_spEventQueue)
-    {
+    if (m_spEventQueue) {
       m_spEventQueue->Shutdown();
     }
 
@@ -427,54 +298,37 @@ void CMPEG1Stream::Shutdown()
   }
 }
 
-//-------------------------------------------------------------------
-// NeedsData
 // Returns TRUE if the stream needs more data.
-//-------------------------------------------------------------------
-
-bool CMPEG1Stream::NeedsData()
-{
+bool Mp2tStream::NeedsData() {
   // Note: The stream tries to keep a minimum number of samples
   // queued ahead.
 
   return (m_fActive && !m_fEOS && (m_Samples.GetCount() < SAMPLE_QUEUE));
 }
 
-//-------------------------------------------------------------------
-// DeliverPayload
 // Delivers a sample to the stream.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::DeliverPayload(IMFSample *pSample)
-{
+void Mp2tStream::DeliverPayload(IMFSample *pSample) {
+#if 0
   // Queue the sample.
   ThrowIfError(m_Samples.InsertBack(pSample));
 
   // Deliver the sample if there is an outstanding request.
   DispatchSamples();
+#endif
 }
 
-/* Private methods */
-
-//-------------------------------------------------------------------
-// DispatchSamples
 // Dispatches as many pending sample requests as possible.
-//-------------------------------------------------------------------
-
-void CMPEG1Stream::DispatchSamples() throw()
-{
+void Mp2tStream::DispatchSamples() throw() {
+#if 0
   // An I/O request can complete after the source is paused, stopped, or
   // shut down. Do not deliver samples unless the source is running.
-  if (m_state != STATE_STARTED)
-  {
+  if (m_state != STATE_STARTED) {
     return;
   }
 
-  try
-  {
+  try {
     // Deliver as many samples as we can.
-    while (!m_Samples.IsEmpty() && !m_Requests.IsEmpty())
-    {
+    while (!m_Samples.IsEmpty() && !m_Requests.IsEmpty()) {
       ComPtr<IMFSample> spSample;
       ComPtr<IUnknown> spToken;
 
@@ -484,8 +338,7 @@ void CMPEG1Stream::DispatchSamples() throw()
       // Pull the next request token from the queue. Tokens can be nullptr.
       ThrowIfError(m_Requests.RemoveFront(&spToken));
 
-      if (spToken != nullptr)
-      {
+      if (spToken != nullptr) {
         // Set the token on the sample.
         ThrowIfError(spSample->SetUnknown(MFSampleExtension_Token, spToken.Get()));
       }
@@ -494,8 +347,7 @@ void CMPEG1Stream::DispatchSamples() throw()
       ThrowIfError(m_spEventQueue->QueueEventParamUnk(MEMediaSample, GUID_NULL, S_OK, spSample.Get()));
     }
 
-    if (m_Samples.IsEmpty() && m_fEOS)
-    {
+    if (m_Samples.IsEmpty() && m_fEOS) {
       // The sample queue is empty AND we have reached the end of the source
       // stream. Notify the pipeline by sending the end-of-stream event.
 
@@ -504,23 +356,17 @@ void CMPEG1Stream::DispatchSamples() throw()
 
       // Notify the source. It will send the end-of-presentation event.
       ThrowIfError(m_spSource->QueueAsyncOperation(SourceOp::OP_END_OF_STREAM));
-    }
-    else if (NeedsData())
-    {
+    } else if (NeedsData()) {
       // The sample queue is empty; the request queue is not empty; and we
       // have not reached the end of the stream. Ask for more data.
       ThrowIfError(m_spSource->QueueAsyncOperation(SourceOp::OP_REQUEST_DATA));
     }
-  }
-  catch (Exception ^exc)
-  {
-    if (m_state != STATE_SHUTDOWN)
-    {
+  } catch (Exception ^exc) {
+    if (m_state != STATE_SHUTDOWN) {
       // An error occurred. Send an MEError even from the source,
       // unless the source is already shut down.
       m_spSource->QueueEvent(MEError, GUID_NULL, exc->HResult, nullptr);
     }
   }
+#endif
 }
-
-#pragma warning( pop )
