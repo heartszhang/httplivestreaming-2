@@ -34,4 +34,7 @@
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
+  <ItemGroup>
+    <Midl Include="$(MSBuildThisFileDirectory)mp2t.idl" />
+  </ItemGroup>
 </Project>

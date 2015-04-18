@@ -6,6 +6,7 @@
 #include <mfidl.h>
 #include <mfapi.h>
 #include <mferror.h>
+#include <mfreadwrite.h>
 #include <d3d11.h>
 
 #include <assert.h>

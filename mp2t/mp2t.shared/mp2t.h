@@ -84,3 +84,15 @@ struct PropVar : PROPVARIANT {
   explicit PropVar(PROPVARIANT const*v) { Copy(v); }
   void Copy(PROPVARIANT const*v) { PropVariantCopy(this, v); }
 };
+
+inline HRESULT Async(IMFAsyncCallback *call, DWORD qid = MFASYNC_CALLBACK_QUEUE_STANDARD, IUnknown*stat = nullptr) {
+  return MFPutWorkItem2(MFASYNC_CALLBACK_QUEUE_STANDARD, 0, call, stat);
+}
+inline HRESULT Async(InvokeFun work, IUnknown*stat = nullptr) {
+  auto invoke = CreateAsyncCallback(work);
+  return Async(invoke.Get(), MFASYNC_CALLBACK_QUEUE_STANDARD, stat);
+}
+inline HRESULT Async2(InvokeFun work, IUnknown*stat = nullptr) {
+  auto invoke = CreateAsyncCallback(work);
+  return Async(invoke.Get(), MFASYNC_CALLBACK_QUEUE_MULTITHREADED, stat);
+}

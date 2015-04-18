@@ -24,4 +24,7 @@
       <UniqueIdentifier>{a0dcbdab-15c8-42ca-9b8b-e2c0cccf4c86}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <Midl Include="$(MSBuildThisFileDirectory)mp2t.idl" />
+  </ItemGroup>
 </Project>

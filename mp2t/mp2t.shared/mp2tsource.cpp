@@ -63,37 +63,25 @@ HRESULT Mp2tSource::QueueEvent(MediaEventType met, REFGUID guidExtendedType, HRE
   return hr;
 }
 
-//-------------------------------------------------------------------
-// CreatePresentationDescriptor
-// Returns a shallow copy of the source's presentation descriptor.
-//-------------------------------------------------------------------
-
 HRESULT Mp2tSource::CreatePresentationDescriptor(IMFPresentationDescriptor **pd) {
   if (pd == nullptr)
     return E_POINTER;
-
   Locker lock(this);
 
   if (!_pd)
     return MF_E_NOT_INITIALIZED;
-  // Fail if the source is shut down.
+
   auto hr = CheckShutdown();
 
   // Fail if the source was not initialized yet.
   if (ok(hr))
     hr = IsInitialized();
 
-  // Clone our presentation descriptor.
   if (ok(hr))
     hr = _pd->Clone(pd);
 
   return hr;
 }
-
-//-------------------------------------------------------------------
-// GetCharacteristics
-// Returns capabilities flags.
-//-------------------------------------------------------------------
 
 HRESULT Mp2tSource::GetCharacteristics(DWORD *c) {
   if (c == nullptr)
@@ -119,11 +107,6 @@ HRESULT Mp2tSource::Pause() {
   return hr;
 }
 
-//-------------------------------------------------------------------
-// Shutdown
-// Shuts down the source and releases all resources.
-//-------------------------------------------------------------------
-
 HRESULT Mp2tSource::Shutdown() {
   Locker lock(this);
   auto hr = CheckShutdown();
@@ -146,18 +129,12 @@ HRESULT Mp2tSource::Shutdown() {
   return hr;
 }
 
-//-------------------------------------------------------------------
-// Start
-// Starts or seeks the media source.
-//-------------------------------------------------------------------
-
 HRESULT Mp2tSource::Start(
-  IMFPresentationDescriptor *pPresentationDescriptor,
+  IMFPresentationDescriptor *pd,
   const GUID *pguidTimeFormat,
-  const PROPVARIANT *pvarStartPos
-  ) {
+  const PROPVARIANT *pvarStartPos) {
   // Start position and presentation descriptor cannot be nullptr.
-  if (pvarStartPos == nullptr || pPresentationDescriptor == nullptr)
+  if (pvarStartPos == nullptr || pd == nullptr)
     return E_INVALIDARG;
 
   // Check the time format.
@@ -183,14 +160,14 @@ HRESULT Mp2tSource::Start(
   if (ok(hr)) hr = IsInitialized();
 
   // Perform a sanity check on the caller's presentation descriptor.
-  if (ok(hr)) hr = ValidatePresentationDescriptor(pPresentationDescriptor);
+  if (ok(hr)) hr = ValidatePresentationDescriptor(pd);
 
   ComPtr<Mp2tSource> me(this);
   PropVar start_time(pvarStartPos);
-  ComPtr<IMFPresentationDescriptor> pd(pPresentationDescriptor);
+  ComPtr<IMFPresentationDescriptor> xpd(pd);
   // The operation looks OK. Complete the operation asynchronously.
-  if (ok(hr)) hr = Async([me, start_time, pd](IMFAsyncResult*)->HRESULT {
-    return me->DoStart(pd.Get(), &start_time);
+  if (ok(hr)) hr = Async([me, start_time, xpd](IMFAsyncResult*)->HRESULT {
+    return me->DoStart(xpd.Get(), &start_time);
   });
 
   return hr;
@@ -210,38 +187,20 @@ HRESULT Mp2tSource::Stop() {
   return hr;
 }
 
-//-------------------------------------------------------------------
-// IMFMediaSource methods
-//-------------------------------------------------------------------
-
-//-------------------------------------------------------------------
-// GetService
-// Returns a service
-//-------------------------------------------------------------------
-
-HRESULT Mp2tSource::GetService(_In_ REFGUID guidService, _In_ REFIID riid, _Out_opt_ LPVOID *ppvObject) {
+HRESULT Mp2tSource::GetService(REFGUID guidService, REFIID riid, LPVOID *ppvObject) {
   HRESULT hr = MF_E_UNSUPPORTED_SERVICE;
 
-  if (ppvObject == nullptr) {
+  if (ppvObject == nullptr)
     return E_POINTER;
-  }
 
-  if (guidService == MF_RATE_CONTROL_SERVICE) {
+  if (guidService == MF_RATE_CONTROL_SERVICE)
     hr = QueryInterface(riid, ppvObject);
-  }
 
   return hr;
 }
 
-//-------------------------------------------------------------------
 // IMFRateControl methods
-//-------------------------------------------------------------------
-
-//-------------------------------------------------------------------
-// SetRate
 // Sets a rate on the source. Only supported rates are 0 and 1.
-//-------------------------------------------------------------------
-
 HRESULT Mp2tSource::SetRate(BOOL fThin, float flRate) {
   if (flRate == _rate)
     return S_OK;
@@ -269,6 +228,21 @@ HRESULT Mp2tSource::GetRate(BOOL *pfThin, float *pflRate) {
   return S_OK;
 }
 
+HRESULT Mp2tSource::OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample * pSample)
+{
+  return E_NOTIMPL;
+}
+
+HRESULT Mp2tSource::OnFlush(DWORD dwStreamIndex)
+{
+  return E_NOTIMPL;
+}
+
+HRESULT Mp2tSource::OnEvent(DWORD dwStreamIndex, IMFMediaEvent * pEvent)
+{
+  return E_NOTIMPL;
+}
+
 //-------------------------------------------------------------------
 // Public non-interface methods
 //-------------------------------------------------------------------
@@ -293,7 +267,42 @@ HRESULT Mp2tSource::GetRate(BOOL *pfThin, float *pflRate) {
 // BeginOpen.
 //-------------------------------------------------------------------
 
-concurrency::task<void> Mp2tSource::OpenAsync(IMFByteStream *pStream) {
+HRESULT Mp2tSource::BeginOpen(IMFByteStream *s, IMFAsyncCallback*cb, IUnknown*stat) {
+  if (s == nullptr)
+    return E_INVALIDARG;
+  Locker lock(this);
+  if (_state != STATE_STARTED)
+    return MF_E_INVALIDREQUEST;
+  auto hr = MFCreateEventQueue(_event_q.ReleaseAndGetAddressOf());
+  _byte_stream = s;
+  DWORD cap = 0;
+  if (ok(hr))
+    hr = _byte_stream->GetCapabilities(&cap);
+  if (ok(hr) && (cap & MFBYTESTREAM_IS_READABLE) == 0)
+    hr = MF_E_UNSUPPORTED_BYTESTREAM_TYPE;
+  if (ok(hr) && (cap & MFBYTESTREAM_IS_SEEKABLE) == 0)
+    hr = MF_E_BYTESTREAM_NOT_SEEKABLE;
+
+  if (failed(hr))
+    return hr;
+  _state = STATE_OPENING;
+  ComPtr<Mp2tSource> me(this);
+  auto xbuf = CreateBuffer(INITIAL_BUFFER_SIZE);
+  BYTE*buf = nullptr;
+  ULONG blen = 0;
+  hr = xbuf->Lock(&buf, &blen, nullptr);
+  auto xcb = CreateAsyncCallback([xbuf, me](IMFAsyncResult*result) ->HRESULT {
+    ULONG readed = 0;
+    auto hr = me->EndRequestData(result, &readed);
+    if (ok(hr))
+      hr = xbuf->SetCurrentLength(readed);
+    // todo: do what here
+    xbuf->Unlock();
+    return hr;
+  });
+  if (ok(hr))
+    hr = BeginRequestData(buf, blen, xcb.Get(), nullptr);
+  return hr;
 #if 0
   if (pStream == nullptr) {
     throw ref new InvalidArgumentException();
@@ -333,9 +342,9 @@ concurrency::task<void> Mp2tSource::OpenAsync(IMFByteStream *pStream) {
   RequestData(READ_SIZE);
 
   m_state = STATE_OPENING;
+  return concurrency::create_task(_openedEvent);
 
 #endif
-  return concurrency::create_task(_openedEvent);
 }
 
 //-------------------------------------------------------------------

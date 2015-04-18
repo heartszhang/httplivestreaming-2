@@ -84,7 +84,7 @@ private:
 class Mp2tSource : public RuntimeClass<RuntimeClassFlags<ClassicCom>
   , IMFMediaSource
   , IMFGetService
-  //  , IMFMediaEventGenerator
+  , IMFSourceReaderCallback
   , IMFRateControl, ISourceLocker> {
 public:// ISourceLocker
   STDMETHODIMP Lock();
@@ -109,15 +109,23 @@ public:
   STDMETHODIMP Stop();
 
   // IMFGetService
-  IFACEMETHOD(GetService) (_In_ REFGUID guidService, _In_ REFIID riid, _Out_opt_ LPVOID *ppvObject);
+  STDMETHODIMP GetService(REFGUID guidService, REFIID riid, LPVOID *ppvObject);
 
   // IMFRateControl
-  IFACEMETHOD(SetRate) (BOOL fThin, float flRate);
-  IFACEMETHOD(GetRate) (_Inout_opt_ BOOL *pfThin, _Inout_opt_ float *pflRate);
+  STDMETHODIMP SetRate(BOOL fThin, float flRate);
+  STDMETHODIMP GetRate(BOOL *pfThin, float *pflRate);
+
+public:
+  STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample);
+
+  STDMETHODIMP OnFlush(DWORD dwStreamIndex);
+
+  STDMETHODIMP OnEvent(DWORD dwStreamIndex, IMFMediaEvent *pEvent);
 
   // Called by the byte stream handler.
-  concurrency::task<void> OpenAsync(IMFByteStream *pStream);
-
+  //concurrency::task<void> OpenAsync(IMFByteStream *pStream);
+  HRESULT BeginOpen(IMFByteStream *s, IMFAsyncCallback*c, IUnknown* stat);
+  HRESULT EndOpen(IMFAsyncResult*, IMFSourceReader**);
   // Queues an asynchronous operation, specify by op-type.
   // (This method is public because the streams call it.)
   HRESULT QueueAsyncOperation(SourceOp::Operation OpType);
@@ -126,6 +134,7 @@ public:
   HRESULT BeginRequestData(BYTE *buf, ULONG blen, IMFAsyncCallback*cb, IUnknown*stat = nullptr);
   HRESULT EndRequestData(IMFAsyncResult *, ULONG *readed);
   HRESULT OnByteStreamRead(IMFMediaBuffer *pResult);  // Async callback for RequestData
+
 public:
   Mp2tSource();
   ~Mp2tSource();
