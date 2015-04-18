@@ -35,70 +35,20 @@ HRESULT ABI::mp2t::Mp2tByteStreamHandler::BeginCreateObject(
   ComPtr<IMFAsyncResult> outr;
   auto source = Make<Mp2tSource>();
   auto hr = MFCreateAsyncResult(Cast<IUnknown>(source).Get(), pCallback, punkState, &outr);
-  if (ok(hr)) {
-    hr = source->BeginOpen(stream, CreateAsyncCallback([outr, source](IMFAsyncResult* result) ->HRESULT {
-      ComPtr<IMFSourceReader> reader;
-      auto hr = source->EndOpen(result, &reader);
-      reader;// ignore arg reader
-      outr->SetStatus(hr);
-      hr = MFPutWorkItemEx2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, outr.Get());
-      return hr;
-    }).Get(), nullptr);
-  }
-  //MFASYNC_CALLBACK_QUEUE_MULTITHREADED
-  //if (ok(hr))
-    //hr = MFPutWorkItemEx2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, result.Get());
-  // continue in EndCreate...
-//  ComPtr<IMFSourceReader> reader;
-  //auto hr = CreateSourceReaderAsync(pByteStream, source.Get(), &reader);
+  if (failed(hr))
+    return hr;
 
-  //CreateMediaSourceReaderAsync(pByteStream, [](IMFSourceReader*reader, HRESULT hr)->HRESULT {
-  //});
+  hr = source->BeginOpen(stream, CreateAsyncCallback([outr, source](IMFAsyncResult* result) ->HRESULT {
+    ComPtr<IMFSourceReader> reader;
+    auto hr = source->EndOpen(result, &reader);
+    reader;// ignore arg reader
+    outr->SetStatus(hr);
+    hr = MFInvokeCallback(outr.Get());
+    //hr = MFPutWorkItemEx2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, outr.Get());
+    return hr;
+  }).Get(), nullptr);
+
   return hr;
-#if 0
-  HRESULT hr = S_OK;
-
-  ComPtr<IMFAsyncResult> spResult;
-  ComPtr<Mp2tSource> spSource = Make<Mp2tSource>();//MakeMp2tSource();
-
-  ComPtr<IUnknown> spSourceUnk;
-  ThrowIfError(spSource.As(&spSourceUnk));
-  ThrowIfError(MFCreateAsyncResult(spSourceUnk.Get(), pCallback, punkState, &spResult));
-
-  // Start opening the source. This is an async operation.
-  // When it completes, the source will invoke our callback
-  // and then we will invoke the caller's callback.
-  ComPtr<Mp2tByteStreamHandler> spThis = this;
-  spSource->OpenAsync(pByteStream).then([this, spThis, spResult, spSource](concurrency::task<void>& openTask) {
-    try {
-      if (spResult == nullptr) {
-        ThrowIfError(MF_E_UNEXPECTED);
-      }
-
-      openTask.get();
-    }
-    catch (Exception ^exc) {
-      if (spResult != nullptr) {
-        spResult->SetStatus(exc->HResult);
-      }
-    }
-
-    if (spResult != nullptr) {
-      MFInvokeCallback(spResult.Get());
-    }
-  });
-
-  if (ppIUnknownCancelCookie) {
-    *ppIUnknownCancelCookie = nullptr;
-  }
-}
-catch (Exception ^exc) {
-  hr = exc->HResult;
-}
-
-return hr;
-#endif
-return E_NOTIMPL;
 }
 
 ComPtr<IMFMediaSource> SourceFromResult(IMFAsyncResult*result) {
