@@ -47,6 +47,7 @@ ComPtr<T> Cast(ComPtr<F> i) {
 }
 using InvokeFun = std::function<HRESULT(IMFAsyncResult*)>;
 auto CreateAsyncCallback(InvokeFun func)->ComPtr < IMFAsyncCallback >;
+auto CreateBuffer(DWORD len)->ComPtr<IMFMediaBuffer>;
 template<typename I> using ComVector = std::vector<ComPtr<I>>;
 using SampleVector = ComVector<IMFSample>;
 using TokenVector = ComVector<IUnknown>;
@@ -75,3 +76,11 @@ public:
 
 inline bool ok(HRESULT hr) { return SUCCEEDED(hr); }
 inline bool failed(HRESULT hr) { return FAILED(hr); }
+
+struct PropVar : PROPVARIANT {
+  PropVar() { PropVariantInit(this); }
+  ~PropVar() { PropVariantClear(this); }
+  //PropVar& operator= (PropVar const&) {}
+  explicit PropVar(PROPVARIANT const*v) { Copy(v); }
+  void Copy(PROPVARIANT const*v) { PropVariantCopy(this, v); }
+};

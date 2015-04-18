@@ -41,3 +41,9 @@ const ComPtr<Mp2tStream>& StreamVector::operator[](DWORD index) const {
   assert(index < GetCount());
   return streams[index];
 }
+ComPtr<IMFMediaBuffer> CreateBuffer(DWORD len) {
+  ComPtr<IMFMediaBuffer> ret;
+  auto hr = MFCreateMemoryBuffer(len, &ret);
+  hr;// ignore ret value;
+  return ret;
+}

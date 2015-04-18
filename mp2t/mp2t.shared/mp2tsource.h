@@ -56,7 +56,7 @@ protected:
   Operation   m_op;
   PROPVARIANT m_data;     // Data for the operation.
 };
-
+#if 0
 class StartOp WrlSealed : public SourceOp {
 public:
   StartOp(IMFPresentationDescriptor *pPD);
@@ -67,7 +67,7 @@ public:
 protected:
   ComPtr<IMFPresentationDescriptor> m_spPD; // Presentation descriptor for Start operations.
 };
-
+#endif
 class SetRateOp WrlSealed : public SourceOp {
 public:
   SetRateOp(BOOL fThin, float flRate);
@@ -123,7 +123,7 @@ public:
   HRESULT QueueAsyncOperation(SourceOp::Operation OpType);
 
   // Callbacks
-  HRESULT OnByteStreamRead(IMFAsyncResult *pResult);  // Async callback for RequestData
+  HRESULT OnByteStreamRead(IMFMediaBuffer *pResult);  // Async callback for RequestData
 public:
   Mp2tSource();
   ~Mp2tSource();
@@ -132,7 +132,7 @@ private:
 
   // CheckShutdown: Returns MF_E_SHUTDOWN if the source was shut down.
   HRESULT CheckShutdown() const {
-    return (m_state == STATE_SHUTDOWN ? MF_E_SHUTDOWN : S_OK);
+    return (_state == STATE_SHUTDOWN ? MF_E_SHUTDOWN : S_OK);
   }
 
   void        CompleteOpen(HRESULT hrStatus);
@@ -142,7 +142,7 @@ private:
   bool        IsStreamActive(const Mp2tHeader &packetHdr);
   bool        StreamsNeedData() const;
 
-  void        DoStart(StartOp *pOp);
+  void        DoStart(IMFPresentationDescriptor *pd, PROPVARIANT const*start_time);
   void        DoStop(SourceOp *pOp);
   void        DoPause(SourceOp *pOp);
   void        DoSetRate(SourceOp *pOp);
@@ -150,7 +150,7 @@ private:
   void        OnEndOfStream(SourceOp *pOp);
 
   void        InitPresentationDescriptor();
-  void        SelectStreams(IMFPresentationDescriptor *pPD, const PROPVARIANT varStart);
+  HRESULT        SelectStreams(IMFPresentationDescriptor *pPD, const PROPVARIANT *varStart);
 
   void        RequestData(DWORD cbRequest);
   void        ParseData();
@@ -165,39 +165,37 @@ private:
   // Handler for async errors.
   void        StreamingError(HRESULT hr);
 
-  void        BeginAsyncOp(SourceOp *pOp);
-  void        CompleteAsyncOp(SourceOp *pOp);
+  //  void        BeginAsyncOp(SourceOp *pOp);
+  //  void        CompleteAsyncOp(SourceOp *pOp);
   HRESULT     DispatchOperation(SourceOp *pOp);
   HRESULT     ValidateOperation(SourceOp *pOp);
 
   bool        IsRateSupported(float flRate, float *pflAdjustedRate);
 
 private:
-  long                        m_cRef;                     // reference count
-
-  ::Lock                     m_critSec;                  // critical section for thread safety
-  SourceState                 m_state;                    // Current state (running, stopped, paused)
+  ::Lock                     _lock;                  // critical section for thread safety
+  SourceState                _state;                 // Current state (running, stopped, paused)
 
 //  Buffer                      ^m_ReadBuffer;
 //  Parser                      ^m_parser;
 
-  ComPtr<IMFMediaEventQueue>  m_spEventQueue;             // Event generator helper
-  ComPtr<IMFPresentationDescriptor> m_spPresentationDescriptor; // Presentation descriptor.
+  ComPtr<IMFMediaEventQueue>  _event_q;             // Event generator helper
+  ComPtr<IMFPresentationDescriptor> _pd; // Presentation descriptor.
   concurrency::task_completion_event<void> _openedEvent;  // Event used to signalize end of open operation.
-  ComPtr<IMFByteStream>       m_spByteStream;
+  ComPtr<IMFByteStream>       _byte_stream;
 
   //ExpandableStruct<Mp2tHeader> ^m_header;
   Mp2tHeader                  m_header;
-  StreamVector                m_streams;                  // Array of streams.
+  StreamVector                _streams;                  // Array of streams.
 
   DWORD                       m_cPendingEOS;              // Pending EOS notifications.
   ULONG                       m_cRestartCounter;          // Counter for sample requests.
 
-  ComPtr<SourceOp>            m_spCurrentOp;
+//  ComPtr<SourceOp>            m_spCurrentOp;
   ComPtr<SourceOp>            m_spSampleRequest;
 
   // Async callback helper.
-  ComPtr<IMFAsyncCallback>  m_OnByteStreamRead;
+//  ComPtr<IMFAsyncCallback>  m_OnByteStreamRead;
 
-  float                       m_flRate;
+  float                       _rate = 1.0f;
 };

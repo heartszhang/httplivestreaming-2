@@ -166,7 +166,6 @@ Mp2tStream::Mp2tStream(Mp2tSource *pSource, IMFStreamDescriptor *pSD) :
   m_state(STATE_STOPPED),
   m_fActive(false),
   m_fEOS(false),
-  m_flRate(1.0f),
   m_spSource(pSource),
   m_spStreamDescriptor(pSD) {
   auto module = ::Microsoft::WRL::GetModuleBase();
