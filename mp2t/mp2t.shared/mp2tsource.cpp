@@ -95,44 +95,27 @@ HRESULT Mp2tSource::CreatePresentationDescriptor(IMFPresentationDescriptor **pd)
 // Returns capabilities flags.
 //-------------------------------------------------------------------
 
-HRESULT Mp2tSource::GetCharacteristics(DWORD *pdwCharacteristics) {
-  if (pdwCharacteristics == nullptr) {
+HRESULT Mp2tSource::GetCharacteristics(DWORD *c) {
+  if (c == nullptr)
     return E_POINTER;
-  }
-
-  HRESULT hr = S_OK;
 
   Locker lock(this);
 
-  hr = CheckShutdown();
+  auto hr = CheckShutdown();
 
-  if (SUCCEEDED(hr)) {
-    *pdwCharacteristics = MFMEDIASOURCE_CAN_PAUSE;
-  }
+  if (ok(hr))
+    *c = MFMEDIASOURCE_CAN_PAUSE | MFMEDIASOURCE_CAN_SEEK | MFMEDIASOURCE_HAS_SLOW_SEEK | MFMEDIASOURCE_CAN_SKIPFORWARD | MFMEDIASOURCE_CAN_SKIPBACKWARD;
 
-  // NOTE: This sample does not implement seeking, so we do not
-  // include the MFMEDIASOURCE_CAN_SEEK flag.
   return hr;
 }
 
-//-------------------------------------------------------------------
-// Pause
-// Pauses the source.
-//-------------------------------------------------------------------
-
 HRESULT Mp2tSource::Pause() {
   Locker lock(this);
+  ComPtr<Mp2tSource> me(this);
+  auto hr = CheckShutdown();
 
-  HRESULT hr = S_OK;
-
-  // Fail if the source is shut down.
-  hr = CheckShutdown();
-
-  // Queue the operation.
-  if (SUCCEEDED(hr)) {
-    hr = QueueAsyncOperation(SourceOp::OP_PAUSE);
-  }
-
+  if (ok(hr))
+    hr = Async([me](IMFAsyncResult*)->HRESULT {return me->DoPause(); });
   return hr;
 }
 
@@ -143,41 +126,23 @@ HRESULT Mp2tSource::Pause() {
 
 HRESULT Mp2tSource::Shutdown() {
   Locker lock(this);
-
-  HRESULT hr = S_OK;
+  auto hr = CheckShutdown();
+  if (failed(hr))
+    return hr;
 
   Mp2tStream *pStream = nullptr;
+  _state = STATE_SHUTDOWN;
 
-  hr = CheckShutdown();
-
-  if (SUCCEEDED(hr)) {
-    // Shut down the stream objects.
-    for (DWORD i = 0; i < _streams.GetCount(); i++) {
-      (void)_streams[i]->Shutdown();
-    }
-    // Break circular references with streams here.
-    _streams.Clear();
-
-    // Shut down the event queue.
-    if (_event_q) {
-      (void)_event_q->Shutdown();
-    }
-
-    // Release objects.
-
-    _event_q.Reset();
-    _pd.Reset();
-    _byte_stream.Reset();
-    //    m_spCurrentOp.Reset();
-
-        //    m_header = nullptr;
-
-        //    m_parser = nullptr;
-
-            // Set the state.
-    _state = STATE_SHUTDOWN;
+  for (DWORD i = 0; i < _streams.GetCount(); i++) {
+    (void)_streams[i]->Shutdown();
   }
+  _streams.Clear();
 
+  (void)_event_q->Shutdown();
+
+  _byte_stream = nullptr;
+  _event_q = nullptr;
+  _streams.Clear();
   return hr;
 }
 
@@ -191,93 +156,57 @@ HRESULT Mp2tSource::Start(
   const GUID *pguidTimeFormat,
   const PROPVARIANT *pvarStartPos
   ) {
-  HRESULT hr = S_OK;
-  ComPtr<SourceOp> spAsyncOp;
-  ComPtr<Mp2tSource> me(this);
-  PropVar start_time(pvarStartPos);
-  ComPtr<IMFPresentationDescriptor> pd(pPresentationDescriptor);
-
-  // Check parameters.
-
   // Start position and presentation descriptor cannot be nullptr.
-  if (pvarStartPos == nullptr || pPresentationDescriptor == nullptr) {
+  if (pvarStartPos == nullptr || pPresentationDescriptor == nullptr)
     return E_INVALIDARG;
-  }
 
   // Check the time format.
-  if ((pguidTimeFormat != nullptr) && (*pguidTimeFormat != GUID_NULL)) {
+  if ((pguidTimeFormat != nullptr) && (*pguidTimeFormat != GUID_NULL))
     // Unrecognized time format GUID.
     return MF_E_UNSUPPORTED_TIME_FORMAT;
-  }
 
   // Check the data type of the start position.
-  if ((pvarStartPos->vt != VT_I8) && (pvarStartPos->vt != VT_EMPTY)) {
+  if ((pvarStartPos->vt != VT_I8) && (pvarStartPos->vt != VT_EMPTY))
     return MF_E_UNSUPPORTED_TIME_FORMAT;
-  }
+
+  //ComPtr<SourceOp> spAsyncOp;
 
   Locker lock(this);
 
   // Check if this is a seek request. This sample does not support seeking.
-
-  if (pvarStartPos->vt == VT_I8) {
-    // If the current state is STOPPED, then position 0 is valid.
-    // Otherwise, the start position must be VT_EMPTY (current position).
-
-    if ((_state != STATE_STOPPED) || (pvarStartPos->hVal.QuadPart != 0)) {
-      hr = MF_E_INVALIDREQUEST;
-      goto done;
-    }
-  }
+  if (pvarStartPos->vt == VT_I8 && ((_state != STATE_STOPPED) || (pvarStartPos->hVal.QuadPart != 0)))
+    return MF_E_INVALIDREQUEST;
 
   // Fail if the source is shut down.
-  hr = CheckShutdown();
-  if (FAILED(hr)) {
-    goto done;
-  }
-
+  auto hr = CheckShutdown();
   // Fail if the source was not initialized yet.
-  hr = IsInitialized();
-  if (FAILED(hr)) {
-    goto done;
-  }
+  if (ok(hr)) hr = IsInitialized();
 
   // Perform a sanity check on the caller's presentation descriptor.
-  hr = ValidatePresentationDescriptor(pPresentationDescriptor);
-  if (FAILED(hr)) {
-    goto done;
-  }
+  if (ok(hr)) hr = ValidatePresentationDescriptor(pPresentationDescriptor);
 
+  ComPtr<Mp2tSource> me(this);
+  PropVar start_time(pvarStartPos);
+  ComPtr<IMFPresentationDescriptor> pd(pPresentationDescriptor);
   // The operation looks OK. Complete the operation asynchronously.
-  hr = Async([me, start_time, pd](IMFAsyncResult*)->HRESULT { me->DoStart(pd.Get(), &start_time); return S_OK; });
-
-done:
+  if (ok(hr)) hr = Async([me, start_time, pd](IMFAsyncResult*)->HRESULT {
+    return me->DoStart(pd.Get(), &start_time);
+  });
 
   return hr;
 }
 
-//-------------------------------------------------------------------
-// Stop
-// Stops the media source.
-//-------------------------------------------------------------------
-
 HRESULT Mp2tSource::Stop() {
   Locker lock(this);
 
-  HRESULT hr = S_OK;
-
-  // Fail if the source is shut down.
-  hr = CheckShutdown();
-
+  auto hr = CheckShutdown();
   // Fail if the source was not initialized yet.
-  if (SUCCEEDED(hr)) {
-    hr = IsInitialized();
-  }
+  if (ok(hr))     hr = IsInitialized();
 
   // Queue the operation.
-  if (SUCCEEDED(hr)) {
-    hr = QueueAsyncOperation(SourceOp::OP_STOP);
-  }
-
+  ComPtr<Mp2tSource> me(this);
+  if (ok(hr))
+    hr = Async([me](IMFAsyncResult*)->HRESULT {return me->DoStop(); });
   return hr;
 }
 
@@ -314,42 +243,24 @@ HRESULT Mp2tSource::GetService(_In_ REFGUID guidService, _In_ REFIID riid, _Out_
 //-------------------------------------------------------------------
 
 HRESULT Mp2tSource::SetRate(BOOL fThin, float flRate) {
-  if (fThin) {
+  if (flRate == _rate)
+    return S_OK;
+  if (fThin)
     return MF_E_THINNING_UNSUPPORTED;
-  }
-  if (!IsRateSupported(flRate, &flRate)) {
+
+  if (!IsRateSupported(flRate, &flRate))
     return MF_E_UNSUPPORTED_RATE;
-  }
 
   Locker lock(this);
-  HRESULT hr = S_OK;
-  ComPtr<SourceOp >pAsyncOp;
   ComPtr<Mp2tSource> me(this);
+  auto hr = Async([me, flRate](IMFAsyncResult*)->HRESULT {return me->DoSetRate(flRate); });
 
-  if (flRate == _rate) {
-    goto done;
-  }
-
-  hr = SourceOp::CreateSetRateOp(fThin, flRate, &pAsyncOp);
-
-  if (SUCCEEDED(hr)) {
-    // Queue asynchronous stop
-    hr = Async([me, pAsyncOp](IMFAsyncResult*)->HRESULT {me->DoSetRate(pAsyncOp.Get()); return S_OK; });
-  }
-
-done:
   return hr;
 }
 
-//-------------------------------------------------------------------
-// GetRate
-// Returns a current rate.
-//-------------------------------------------------------------------
-
-HRESULT Mp2tSource::GetRate(_Inout_opt_ BOOL *pfThin, _Inout_opt_ float *pflRate) {
-  if (pfThin == nullptr || pflRate == nullptr) {
+HRESULT Mp2tSource::GetRate(BOOL *pfThin, float *pflRate) {
+  if (pfThin == nullptr || pflRate == nullptr)
     return E_INVALIDARG;
-  }
 
   Locker lock(this);
   *pfThin = FALSE;
@@ -784,13 +695,13 @@ HRESULT Mp2tSource::DispatchOperation(SourceOp *pOp) {
 //      DoStart((StartOp*)pOp);
 //      break;
 
-    case SourceOp::OP_STOP:
-      DoStop(pOp);
-      break;
+//    case SourceOp::OP_STOP:
+//      DoStop(pOp);
+//      break;
 
-    case SourceOp::OP_PAUSE:
-      DoPause(pOp);
-      break;
+      //    case SourceOp::OP_PAUSE:
+      //      DoPause(pOp);
+      //      break;
 
     case SourceOp::OP_SETRATE:
       DoSetRate(pOp);
@@ -848,13 +759,14 @@ HRESULT Mp2tSource::ValidateOperation(SourceOp *pOp) {
 // Start() method fails if the caller requests a seek.
 //-------------------------------------------------------------------
 
-void Mp2tSource::DoStart(IMFPresentationDescriptor* pd, PROPVARIANT const*start_time) {
+HRESULT Mp2tSource::DoStart(IMFPresentationDescriptor* pd, PROPVARIANT const*start_time) {
   auto hr = SelectStreams(pd, start_time);
 
   _state = STATE_STARTED;
 
   // Queue the "started" event. The event data is the start position.
   hr = _event_q->QueueEventParamVar(MESourceStarted, GUID_NULL, hr, start_time);
+  return hr;
   // if (failed(hr))
  //    (void)m_spEventQueue->QueueEventParamVar(MESourceStarted, GUID_NULL, exc->HResult, nullptr);
 
@@ -917,7 +829,30 @@ void Mp2tSource::DoStart(IMFPresentationDescriptor* pd, PROPVARIANT const*start_
 // Perform an async stop operation (IMFMediaSource::Stop)
 //-------------------------------------------------------------------
 
-void Mp2tSource::DoStop(SourceOp *pOp) {
+HRESULT Mp2tSource::DoStop() {
+  Locker lock(this);
+
+  // Stop the active streams.
+  for (DWORD i = 0; i < _streams.GetCount(); i++) {
+    if (_streams[i]->IsActive()) {
+      _streams[i]->Stop();
+    }
+  }
+  // Seek to the start of the file. If we restart after stopping,
+  // we will start from the beginning of the file again.
+  QWORD qwCurrentPosition = 0;
+  auto hr = _byte_stream->Seek(msoBegin, 0, MFBYTESTREAM_SEEK_FLAG_CANCEL_PENDING_IO, &qwCurrentPosition);
+
+  // Increment the counter that tracks "stale" read requests.
+  ++m_cRestartCounter; // This counter is allowed to overflow.
+
+  m_spSampleRequest = nullptr;
+
+  _state = STATE_STOPPED;
+
+  // Send the "stopped" event. This might include a failure code.
+  hr = _event_q->QueueEventParamVar(MESourceStopped, GUID_NULL, hr, nullptr);
+  return hr;
 #if 0
   BeginAsyncOp(pOp);
 
@@ -972,7 +907,21 @@ void Mp2tSource::DoStop(SourceOp *pOp) {
 // Perform an async pause operation (IMFMediaSource::Pause)
 //-------------------------------------------------------------------
 
-void Mp2tSource::DoPause(SourceOp *pOp) {
+HRESULT Mp2tSource::DoPause() {
+  Locker lock(this);
+  auto hr = S_OK;
+  if (_state != STATE_STARTED)
+    return _event_q->QueueEventParamVar(MESourcePaused, GUID_NULL, MF_E_INVALID_STATE_TRANSITION, nullptr);
+
+  // Pause the active streams.
+  for (DWORD i = 0; i < _streams.GetCount(); i++) {
+    if (_streams[i]->IsActive()) {
+      _streams[i]->Pause();
+    }
+  }
+  _state = STATE_PAUSED;
+  hr = _event_q->QueueEventParamVar(MESourcePaused, GUID_NULL, hr, nullptr);
+  return hr;
 #if 0
   BeginAsyncOp(pOp);
 
@@ -1012,7 +961,17 @@ void Mp2tSource::DoPause(SourceOp *pOp) {
 // Perform an async set rate operation (IMFRateControl::SetRate)
 //-------------------------------------------------------------------
 
-void Mp2tSource::DoSetRate(SourceOp *pOp) {
+HRESULT Mp2tSource::DoSetRate(float r) {
+  Locker lock(this);
+  _rate = r;
+  // Set rate on active streams.
+  for (DWORD i = 0; i < _streams.GetCount(); i++) {
+    if (_streams[i]->IsActive()) {
+      _streams[i]->SetRate(_rate);
+    }
+  }
+  auto hr = _event_q->QueueEventParamVar(MESourceRateChanged, GUID_NULL, S_OK, nullptr);
+  return hr;
 #if 0
   SetRateOp *pSetRateOp = static_cast<SetRateOp*>(pOp);
   BeginAsyncOp(pOp);
@@ -1179,6 +1138,17 @@ HRESULT Mp2tSource::SelectStreams(
 //
 // cbRequest: Amount of data to read, in bytes.
 //-------------------------------------------------------------------
+HRESULT Mp2tSource::BeginRequestData(BYTE *buf, ULONG blen, IMFAsyncCallback*cb, IUnknown*stat) {
+  Locker lock(this);
+  //  auto hr = buf->Lock(&b, &len, nullptr);
+  auto hr = _byte_stream->BeginRead(buf, blen, cb, stat);
+  return hr;
+}
+HRESULT Mp2tSource::EndRequestData(IMFAsyncResult* result, ULONG *readed) {
+  Locker lock(this);
+  auto hr = _byte_stream->EndRead(result, readed);
+  return hr;
+}
 
 void Mp2tSource::RequestData(DWORD cbRequest) {
   auto buf = CreateBuffer(cbRequest);
@@ -1192,6 +1162,10 @@ void Mp2tSource::RequestData(DWORD cbRequest) {
     buf->Unlock();
     return hr;
   });
+  BYTE* b = nullptr;
+  ULONG len = 0;
+  auto hr = buf->Lock(&b, &len, nullptr);
+  if (ok(hr)) hr = _byte_stream->BeginRead(b, len, cb.Get(), nullptr);
   //  auto hr = _byte_stream->BeginRead(m_ReadBuffer->DataPtr + m_ReadBuffer->DataSize, cbRequest, cb.Get(), m_spSampleRequest.Get());
 #if 0
   // Reserve a sufficient read buffer.

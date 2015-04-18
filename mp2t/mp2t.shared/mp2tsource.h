@@ -123,6 +123,8 @@ public:
   HRESULT QueueAsyncOperation(SourceOp::Operation OpType);
 
   // Callbacks
+  HRESULT BeginRequestData(BYTE *buf, ULONG blen, IMFAsyncCallback*cb, IUnknown*stat = nullptr);
+  HRESULT EndRequestData(IMFAsyncResult *, ULONG *readed);
   HRESULT OnByteStreamRead(IMFMediaBuffer *pResult);  // Async callback for RequestData
 public:
   Mp2tSource();
@@ -142,10 +144,10 @@ private:
   bool        IsStreamActive(const Mp2tHeader &packetHdr);
   bool        StreamsNeedData() const;
 
-  void        DoStart(IMFPresentationDescriptor *pd, PROPVARIANT const*start_time);
-  void        DoStop(SourceOp *pOp);
-  void        DoPause(SourceOp *pOp);
-  void        DoSetRate(SourceOp *pOp);
+  HRESULT        DoStart(IMFPresentationDescriptor *pd, PROPVARIANT const*start_time);
+  HRESULT        DoStop();
+  HRESULT        DoPause();
+  HRESULT        DoSetRate(float r);
   void        OnStreamRequestSample(SourceOp *pOp);
   void        OnEndOfStream(SourceOp *pOp);
 
