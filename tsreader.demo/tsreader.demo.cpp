@@ -61,7 +61,8 @@ HRESULT ReadMedia(ComPtr<IMFSourceReader> reader) {
 }
 HRESULT tmain_imp(int argc, _TCHAR* argv[]) {
   argc; argv;
-  auto url = LR"(file:///f:\fs.ts)";
+  //auto url = LR"(http://gslb.bestvcdn.com.cloudcdn.net/218.77.90.60/gslb/program/Dbackct_bestvcdn_comD/_9Xxr00bTIO_/FDN/FDNB1690862/700/stream.m3u8?_cp=1&_back=FASTWEB&taskID=pb02.idc.xbox.bestv.com.cn_1428984407481_023513000004901)";
+  auto url = LR"(http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8)";
   ComPtr<IMFSourceReader> reader;
   auto hr = MFCreateSourceReaderFromURL(url, NULL, reader.ReleaseAndGetAddressOf());
   if (ok(hr))
