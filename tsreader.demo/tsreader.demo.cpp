@@ -24,7 +24,7 @@ HRESULT PrintMediaType(DWORD sidx, DWORD mtidx, ComPtr<IMFMediaType> mt) {
   mtidx;
   mt;
   sidx;
-  BOOL zipped = FALSE;
+  auto zipped = FALSE;
   mt->IsCompressedFormat(&zipped);
   AM_MEDIA_TYPE *rep = nullptr;
   auto hr = MFCreateAMMediaTypeFromMFMediaType(mt.Get(), GUID_NULL, &rep);
@@ -69,17 +69,17 @@ HRESULT tmain_imp(int argc, _TCHAR* argv[]) {
   //auto url = LR"(http://gslb.bestvcdn.com.cloudcdn.net/218.77.90.60/gslb/program/Dbackct_bestvcdn_comD/_9Xxr00bTIO_/FDN/FDNB1690862/700/stream.m3u8?_cp=1&_back=FASTWEB&taskID=pb02.idc.xbox.bestv.com.cn_1428984407481_023513000004901)";
   auto url = LR"(http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8)";
   ComPtr<IMFSourceReader> reader;
-  auto hr = MFCreateSourceReaderFromURL(url, NULL, reader.ReleaseAndGetAddressOf());
+  auto hr = MFCreateSourceReaderFromURL(url, nullptr, reader.ReleaseAndGetAddressOf());
   if (ok(hr))
     hr = ReadMedia(reader);
   return hr;
 }
 int _tmain(int argc, _TCHAR* argv[])
 {
-  auto hr = CoInitializeEx(0, COINIT_MULTITHREADED);
+  auto hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
   if (ok(hr)) hr = MFStartup(MF_VERSION);
   if (ok(hr)) hr = tmain_imp(argc, argv);
   MFShutdown();
   CoUninitialize();
-	return hr;
+  return hr;
 }
