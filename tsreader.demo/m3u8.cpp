@@ -10,7 +10,7 @@ const uint64 second = 10000000ull/100; // 100 nano-secs
 struct m3u8stack {
   bool                  m3u8                  = false;
   bool                  is_media_list         = false;
-  bool                  is_master_list        = true;
+  bool                  is_master_list        = false;
   bool                  allow_cache           = true;
   bool                  end_list              = false;
   bool                  discontinuity         = false;
@@ -274,21 +274,21 @@ utf8string suffix_trim(utf8string &s, utf8string const&prefix){
 }
 
 bool is_not_space(char const&c){
-  return c == ' ' || c == '\t';
+  return !(c == ' ' || c == '\t');
 }
 utf8string ltrim(utf8string const&s){
   auto v = s;
-  v.erase(s.begin(), std::find_if(s.begin(), s.end(), is_not_space));
+  v.erase(v.begin(), std::find_if(v.begin(), v.end(), is_not_space));
   return v;
 }
 utf8string rtrim(utf8string const&s){
   auto v = s;
-  v.erase((std::find_if(s.rbegin(), s.rend(), is_not_space)).base(), s.end());
+  v.erase((std::find_if(v.rbegin(), v.rend(), is_not_space)).base(), v.end());
   return v;
 }
 
 utf8string trim(utf8string const&s){
-  return ltrim(rtrim(s));
+  return rtrim(ltrim(s));
 }
 
 std::vector<utf8string> string_split(utf8string const&line, char sep){
