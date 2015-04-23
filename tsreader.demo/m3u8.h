@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include <map>
-#include <string>
 #include <cstdint>
+#include "linereader.h"
 
 namespace m3u8 {
 using uint = uint32_t;
@@ -10,15 +10,6 @@ using string = std::wstring;
 using uint64 = uint64_t;
 using utf8string = std::string;
 using params_t = std::map < utf8string, utf8string > ;
-using xkey = params_t;
-
-struct __declspec( novtable ) line_reader {
-  virtual utf8string read_line(int *err) = 0;
-  virtual bool eof() = 0;
-};
-params_t to_params2( utf8string const&line );
-
-xkey decode_key( utf8string const&line );
 
 // This structure represents a media segment included in a media playlist.
 // Media segment may be encrypted.
@@ -60,7 +51,7 @@ struct media_playlist{
   string    audio;
   string    video;
   string    codec;//comma seperated 
-  xkey     key;       // EXT-X-KEY is optional encryption key displayed before any segments (default key for the playlist)
+  params_t  key;       // EXT-X-KEY is optional encryption key displayed before any segments (default key for the playlist)
   string   uri;  //absolute
   string    title;
   utf8string playlist_type = "VOD";//VOD, EVENT
@@ -75,43 +66,5 @@ struct media_playlist{
    std::vector<media_playlist> medias;
  };
  master_playlist decode_playlist( line_reader*reader );
-/*
-This structure represents a single bitrate playlist aka media playlist.
-It related to both a simple media playlists and a sliding window media playlists.
-URI lines in the Playlist point to media segments.
-Simple Media Playlist file sample:
-#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-TARGETDURATION:5220
-#EXTINF:5219.2,
-http://media.example.com/entire.ts
-#EXT-X-ENDLIST
-Sample of Sliding Window Media Playlist, using HTTPS:
-#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-TARGETDURATION:8
-#EXT-X-MEDIA-SEQUENCE:2680
-#EXTINF:7.975,
-https://priv.example.com/fileSequence2680.ts
-#EXTINF:7.941,
-https://priv.example.com/fileSequence2681.ts
-#EXTINF:7.975,
-https://priv.example.com/fileSequence2682.ts
-*/
-
-/*
-This structure represents a master playlist which combines media playlists for multiple bitrates.
-URI lines in the playlist identify media playlists.
-Sample of Master Playlist file:
-#EXTM3U
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=1280000
-http://example.com/low.m3u8
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=2560000
-http://example.com/mid.m3u8
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=7680000
-http://example.com/hi.m3u8
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=65000,CODECS="mp4a.40.5"
-http://example.com/audio-only.m3u8
-*/
  
 }

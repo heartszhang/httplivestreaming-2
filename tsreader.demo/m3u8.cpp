@@ -1,61 +1,69 @@
 #include "pch.h"
 #include "m3u8.h"
-
+#include <algorithm>
+#include <sstream>
+#include <ctime>
 using namespace m3u8;
 
-const uint64 second = 10000000/100ull; // 100 nano-secs
+const uint64 second = 10000000ull/100; // 100 nano-secs
 
 struct m3u8stack {
-  bool m3u8 = false;
-  bool is_media_list = false;
-  bool is_master_list = true;
-  bool allow_cache = true;
-  bool end_list = false;
-  bool discontinuity = false;
-  bool iframes_only = false;
-  uint64 duration = 0; // for media-list
-  uint64 inf_duration = 0;
-  uint64 byte_range_n = 0;
-  uint64 byte_range_offset = 0;
-  uint64 target_duration = 0;  //100 nano-secs
-  uint64 media_sequence = 0;
-  uint64 program_datetime = 0;  //unixtime64
-  uint64 ver = 3;
-  string inf_title;
-  utf8string playlist_type ; // "" = VOD, EVENT = LIVE, 
-  string uri;
+  bool                  m3u8                  = false;
+  bool                  is_media_list         = false;
+  bool                  is_master_list        = true;
+  bool                  allow_cache           = true;
+  bool                  end_list              = false;
+  bool                  discontinuity         = false;
+  bool                  iframes_only          = false;
+  uint64                duration              = 0; // for media-list
+  uint64                inf_duration          = 0;
+  uint64                byte_range_n          = 0;
+  uint64                byte_range_offset     = 0;
+  uint64                target_duration       = 0; //100 nano-secs
+  uint64                media_sequence        = 0;
+  uint64                program_datetime      = 0; //unixtime64
+  uint64                ver                   = 3;
+  string                inf_title;
+  utf8string            playlist_type ="VOD"; // "" = VOD, EVENT = LIVE,
+  string                uri;
   std::vector<params_t> medias;
-  ::media_playlist media_playlist;
-  ::master_playlist master_playlist;
-  params_t  stream_inf;
-  params_t  iframe_inf;
-  params_t key;
-  int error = 0;
+  ::media_playlist      media_playlist;
+  ::master_playlist     master_playlist;
+  params_t              stream_inf;
+  params_t              iframe_inf;
+  params_t              key;
+  int                   error                 = 0;
 };
 
-utf8string suffix_trim( utf8string const& , utf8string const&prefix);
-utf8string trim( utf8string const&line );
-bool has_prefix( utf8string const&line, utf8string const&prefix );
+utf8string              suffix( utf8string &line, utf8string const&prefix );
+utf8string              trim( utf8string const&line );
+utf8string              suffix_trim( utf8string & , utf8string const&prefix);
+string                  utf82unicode( utf8string const& );
+bool                    has_prefix( utf8string const&line, utf8string const&prefix );
 std::vector<utf8string> string_split( utf8string const&line, char sep );
-string utf82unicode( utf8string const& );
-double to_float64( utf8string const&line );
-utf8string suffix( utf8string const&line, utf8string const&prefix );
-uint64 to_uint64( utf8string const&key );
-uint64 as_uint64( params_t const&, utf8string const&key );
-std::tuple<uint64, uint64> as_resolution( params_t const&, utf8string const&key );
-utf8string as_string( params_t const&,utf8string const& key);
-utf8string as_enum( params_t const&, utf8string const&key, utf8string const&dft );
-void media_playlist_ctor( m3u8stack &ctx );
-void master_playlist_ctor( m3u8stack &ctx );
-media_segment make_segment( m3u8stack &ctx, utf8string const&url );
-media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url);
 
-std::tuple<uint64, string> decode_inf( utf8string const&line );
-std::tuple<uint64, uint64> decode_byte_range( utf8string const&line ); // n = 0 : means no byte-range, offset = -1 means, use previous offset
-// uint64 decode_media_sequence( utf8string const&line );
-uint64 decode_program_datetime( utf8string const&line );
-bool   decode_yesno( utf8string const&line );
-void media_playlist_ctro( m3u8stack &ctx );
+double to_float64( utf8string const&line );  // std::stod
+uint64 to_uint64( utf8string const&key );  // std::stoull
+params_t to_params( utf8string const&line );
+
+uint64                     as_uint64( params_t const&, utf8string const&key );
+std::tuple<uint64, uint64> as_resolution( params_t const&, utf8string const&key );
+utf8string                 as_string( params_t const&,utf8string const& key);
+utf8string                 as_enum( params_t const&, utf8string const&key, utf8string const&dft );
+
+void           media_playlist_ctor( m3u8stack &ctx );
+void           master_playlist_ctor( m3u8stack &ctx );
+media_segment  make_segment( m3u8stack &ctx, utf8string const&url );  // apply extinf
+media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url);  // apply ext-x-stream-inf
+
+
+// n = 0 : means no byte-range,
+// offset = -1 means, use previous offset
+std::tuple<uint64, uint64> decode_byte_range( utf8string const&line );
+uint64                     decode_program_datetime( utf8string const&line );
+bool                       decode_yesno( utf8string const&line );
+std::tuple<uint64, string> decode_inf( utf8string const&line );  //EXTINF
+params_t decode_key( utf8string line );
 
 //#EXT-X-MEDIA-SEQUENCE:<number>
 uint64 decode_media_sequence( utf8string const&line ) {
@@ -64,8 +72,9 @@ uint64 decode_media_sequence( utf8string const&line ) {
 
 // #EXT-X-PROGRAM-DATE-TIME:<YYYY-MM-DDThh:mm:ssZ>
 uint64 decode_program_datetime( utf8string const&line ) {
-  return 0; // not implemented yet
-  //return to_unixtime( line );
+  //strptime not found on windows
+  line;
+  return 0;
 }
 
 bool decode_yesno( utf8string const&line ) {
@@ -84,14 +93,16 @@ std::tuple<uint64, string> decode_inf( utf8string const&line ) {
   if ( fields.size() >= 2 ) {
     t = utf82unicode( fields[ 1 ] );
   } else if ( fields.size() == 1 ) {
-    d = static_cast<uint64>( to_float64( fields[ 0 ] ) * 10000 ); // 100 nano-secs
+    d = static_cast<uint64>( to_float64( fields[ 0 ] ) * second ); // 100 nano-secs
   }
   return std::make_tuple(d, t);
 }
 
 void assure(bool exp) {
-  
+  // todo: implement later
+  exp;
 }
+
 master_playlist m3u8::decode_playlist( line_reader*reader ) {
   const char *t = nullptr;
   m3u8stack ctx;
@@ -104,11 +115,12 @@ master_playlist m3u8::decode_playlist( line_reader*reader ) {
     } else if ( has_prefix( line, t = "#EXTINF:" ) ) {//#EXTINF:<duration>,<title>
       ctx.is_media_list = true;
       std::tie(ctx.inf_duration, ctx.inf_title) = decode_inf( suffix_trim( line, t ) );
+      ctx.duration +=ctx.inf_duration;
     } else if ( has_prefix( line, t = "#EXT-X-BYTERANGE:" ) ) {
       ctx.is_media_list = true;
       auto br = decode_byte_range( suffix_trim( line, t ) );
       if ( std::get<1>(br) != 0 - 1ull ) {// offset
-        ctx.byte_range_offset = std::get<1>( br );        
+        ctx.byte_range_offset = std::get<1>( br );
       }
       ctx.byte_range_n = std::get<0>( br );
     } else if ( has_prefix( line, t = "#EXT-X-TARGETDURATION:" ) ) {//#EXT-X-TARGETDURATION:<s>
@@ -129,12 +141,12 @@ master_playlist m3u8::decode_playlist( line_reader*reader ) {
       ctx.playlist_type = trim( suffix_trim( line, t ) );
     } else if ( has_prefix( line, t = "#EXT-X-ENDLIST" ) ) {
       ctx.is_media_list = true;
-      ctx.end_list = true; // media-playlist 
+      ctx.end_list = true; // media-playlist
     } else if ( has_prefix( line, t = "#EXT-X-MEDIA:" ) ) {
-      ctx.medias.push_back( to_params2( suffix_trim( line, t ) ) );
+      ctx.medias.push_back( to_params( suffix_trim( line, t ) ) );
     } else if ( has_prefix( line, t = "#EXT-X-STREAM-INF:" ) ) {  //#EXT-X-STREAM-INF:<attribute-list>
       ctx.is_master_list = true;
-      ctx.stream_inf = to_params2( suffix_trim( line, t ) );
+      ctx.stream_inf = to_params( suffix_trim( line, t ) );
     } else if ( has_prefix( line, t = "#EXT-X-DISCONTINUITY" ) ) {
       ctx.is_media_list = true;
       ctx.discontinuity = true;
@@ -143,7 +155,7 @@ master_playlist m3u8::decode_playlist( line_reader*reader ) {
       ctx.iframes_only = true;
     } else if ( has_prefix( line, t = "#EXT-X-I-FRAMES-STREAM-INF:" ) ) {//#EXT-X-I-FRAME-STREAM-INF:<attribute-list>
       ctx.is_media_list = true;
-      ctx.iframe_inf = to_params2( suffix_trim( line, t ) );
+      ctx.iframe_inf = to_params( suffix_trim( line, t ) );
     } else if ( has_prefix( line, t = "#EXT-X-VERSION:" ) ) {//#EXT-X-VERSION:<n>
       ctx.ver = to_uint64( suffix_trim( line, t ) );
     } else if ( has_prefix( line, t = "#" ) ) {
@@ -167,7 +179,7 @@ master_playlist m3u8::decode_playlist( line_reader*reader ) {
     line = trim(reader->read_line( &err ));
   }
   if ( err != -1 ) {  // -1: end of stream
-    ctx.error = ctx.master_playlist.error = err;    
+    ctx.error = ctx.master_playlist.error = err;
   }
   master_playlist_ctor( ctx );
   if ( ctx.is_media_list ) {
@@ -178,21 +190,8 @@ master_playlist m3u8::decode_playlist( line_reader*reader ) {
   return ctx.master_playlist;
 }
 
-//a flaw implementation
-params_t m3u8::to_params2( utf8string const&line ) {
-  params_t v;
-  auto fields = string_split( line, ',' );
-  for ( auto i = fields.begin(); i != fields.end(); ++i ) {
-    auto nv = string_split( *i, '=' );
-    if ( nv.size() != 2 )
-      continue;
-    v[ trim( nv[ 0 ] ) ] = nv[ 1 ];
-  }
-  return v;
-}
-
 params_t decode_key( utf8string line ) {
-  return to_params2( line );
+  return to_params( line );
 }
 // #EXT-X-BYTERANGE:<n>[@o]
 std::tuple<uint64, uint64> decode_byte_range( utf8string const&line ) {
@@ -218,12 +217,11 @@ media_segment make_segment(m3u8stack &ctx, utf8string const&url) {
   if ( v.uri.empty() )
     ctx.error = -2;  // just a magic number
   v.duration = ctx.inf_duration;
-  ctx.duration += v.duration;
   v.seqno = ctx.media_sequence;
   v.title = ctx.inf_title;
   v.discontinuity = ctx.discontinuity;
   v.allow_cache = ctx.allow_cache;
-  return;
+  return v;
 }
 
 media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url) {
@@ -265,4 +263,87 @@ void master_playlist_ctor( m3u8stack &ctx ) {
 
   // todo: #EXT-X-MEDIA:TYPE, i dont know how to process x-media
   // we just abandoned it now
+}
+
+utf8string suffix(utf8string &s, utf8string const&prefix){
+  return s.substr(prefix.length());
+}
+utf8string suffix_trim(utf8string &s, utf8string const&prefix){
+  auto v = s.substr(prefix.length());
+  return trim(v);
+}
+
+bool is_not_space(char const&c){
+  return c == ' ' || c == '\t';
+}
+utf8string ltrim(utf8string const&s){
+  auto v = s;
+  v.erase(s.begin(), std::find_if(s.begin(), s.end(), is_not_space));
+  return v;
+}
+utf8string rtrim(utf8string const&s){
+  auto v = s;
+  v.erase((std::find_if(s.rbegin(), s.rend(), is_not_space)).base(), s.end());
+  return v;
+}
+
+utf8string trim(utf8string const&s){
+  return ltrim(rtrim(s));
+}
+
+std::vector<utf8string> string_split(utf8string const&line, char sep){
+  std::vector<utf8string> v;
+  std::stringstream ss(line);
+  utf8string i;
+  while(std::getline(ss, i, sep)){
+    v.push_back(i);
+  }
+  return v;
+}
+
+string utf82unicode(utf8string const&s){
+  std::vector<wchar_t> buf(s.size() + 1);
+  auto r = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED| MB_USEGLYPHCHARS, s.c_str(), -1, &buf[0], static_cast<int>(buf.size()));
+  return string(&buf[0], r);
+}
+
+bool has_prefix(utf8string const&s, utf8string const&prefix){
+  auto i = std::mismatch(prefix.begin(), prefix.end(), s.begin());
+  return i.first == prefix.end();
+}
+
+//throw invalid_argument exception
+double to_float64(utf8string const&s){
+  return std::stod(s);
+}
+
+//throw invalid_argument exception
+uint64 to_uint64(utf8string const&s){
+  return std::stoull(s);
+}
+
+uint64 as_uint64( params_t const&x, utf8string const&key ){
+  auto i = x.find(key);
+  if (i != x.end()){
+    return to_uint64(i->second);
+  }
+  return 0;
+}
+
+utf8string as_enum( params_t const&x, utf8string const&key, utf8string const&dft ){
+  auto i = x.find(key);
+  return i == x.end() ? dft : i->second;
+}
+//\d+x\d+ without whitespace
+std::tuple<uint64, uint64> as_resolution( params_t const&x, utf8string const&key ){
+  auto v = as_enum(x, key, "0x0");
+  auto fields = string_split(v, 'x');
+  if (fields.size() == 2){
+    return std::make_tuple(to_uint64(fields[0]), to_uint64(fields[1]));
+  }
+  return std::make_tuple(0ull, 0ull);
+}
+
+utf8string as_string( params_t const&x, utf8string const& key){
+  return as_enum(x, key, "");
 }

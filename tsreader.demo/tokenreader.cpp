@@ -1,69 +1,67 @@
 #include "pch.h"
-#include "m3u8.h"
+#include "attrreader.h"
+inline bool is_name_char( char c ) {
+  return ( c >= 'A'&&c <= 'Z' ) || c == '-';
+}
 namespace m3u8 {
-struct token_reader {
-  int err;
-  int begin;
+//   AttributeName=AttributeValue[,AttributeName=AttributeValue]*
+//   Certain extended M3U tags have values which are Attribute Lists.  An
+//   Attribute List is a comma-separated list of attribute/value pairs
+//   with no whitespace.
+struct attrlist_reader {
+  int err = 0;                        //-1:eof, 0: ok, other: failed
+  int begin = 0;
   const utf8string &line;
-  utf8string token() {
+  utf8string attrname() { //[A..Z-]
     utf8string n;
     if ( err != 0 ) return n;
-    for ( ; begin < line.size(); begin++ ) {
-      if ( line[ begin ] != '=' && !is_space( line[ begin ] ) )
-        n.push_back( line[ begin ] );
-    }
+    for ( ; begin < line.size() && is_name_char( line[ begin ] ); ++begin );
     return n;
   }
-  explicit token_reader( utf8string const&line ) :line( line ) {}
+  explicit attrlist_reader( utf8string const&line ) :line( line ) {}
   void expect_eq() {
-    if ( err != 0 )return;
-    for ( ; begin < line.size() && is_space( line[ begin ] ); ++begin );
-    if ( begin >= line.size() || line[ begin ] != '=' )
-      err = -2;
-    ++begin;
-    for ( ; begin < line.size() && is_space( line[ begin ] ); ++begin );
-
+    if ( begin < line.size() && line[ begin ] == '=' )
+      ++begin;
+    else err = -2;
     return;
   }
   void expect_comma() {
     if ( err != 0 )return;
-    for ( ; begin < line.size() && is_space( line[ begin ] ); ++begin );
     if ( begin < line.size() && line[ begin ] == ',' )
       ++begin;
-    for ( ; begin < line.size() && is_space( line[ begin ] ); ++begin );
+    else if ( begin < line.size() )
+      err = -4;
   }
-  utf8string value() {
+  utf8string attrvalue() {
     utf8string v;
     if ( err != 0 ) return v;
-    if ( begin + 1 == line.size() || line[ begin ] == ',' ) {
-      ++begin;
-      return;
+    if ( line[ begin ] == '"' )
+      return string_value();
+    for ( ; begin < line.size() && line[ begin ] != ','; ++begin ) {
+      v.push_back( line[ begin ] );
     }
-    if ( line[ begin ] == '"' ) {
-      v = string_value();
-    } else {
-      for ( ; begin < line.size() && line[ begin ] != ',' && !is_space( line[ begin ] ); ++begin ) {
-        v.push_back( line[ begin ] );
-      }
-    }
-    //   for ( ; begin < line.size() && is_space( line[ begin ] ); ++begin );
-    //    if ( begin < line.size() ) ++begin;
+    return v;
   }
   utf8string string_value() {
     utf8string v;
-    ++begin;
+    ++begin;  //ignore the first "
     auto x = false;
     for ( ; begin < line.size(); ++begin ) {
+      auto c = line[ begin ];
       if ( x == true ) {
-        v.push_back( line[ begin ] );
+        if ( c == 'r' )
+          v.push_back( '\r' );
+        else if ( c == 'n' )
+          v.push_back( '\n' );
+        else v.push_back( line[ begin ] );
         x = false;
         continue;
       }
-      if ( line[ begin ] == '\\' ) {
+      if ( c == '\\' ) {
         x = true;
         continue;
       }
-      if ( line[ begin ] == '"' ) {
+      if ( c == '"' ) {
         break;
       }
       v.push_back( line[ begin ] );
@@ -73,19 +71,21 @@ struct token_reader {
     ++begin;
     return v;
   }
+private:
+  attrlist_reader operator=( const attrlist_reader& ) = delete;
 };
+}
+using namespace m3u8;
 params_t to_params( utf8string const&line ) {
   params_t v;
-  token_reader reader( line );
+  attrlist_reader reader( line );
   while ( reader.err == 0 && reader.begin < line.size() ) {
-    auto name = reader.token();
+    auto name = reader.attrname();
     reader.expect_eq();
-    auto val = reader.value();
-    v[ name ] = val;
+    auto val = reader.attrvalue();
+    if (reader.err == 0 )
+      v[ name ] = val;
     reader.expect_comma();
   }
   return v;
 }
-}
-//comma in attribute-value should be escaped, but we dont process it
-//AttributeName=AttributeValue,<AttributeName=AttributeValue>*

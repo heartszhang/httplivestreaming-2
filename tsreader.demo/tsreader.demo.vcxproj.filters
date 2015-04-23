@@ -24,6 +24,12 @@
     <ClInclude Include="m3u8.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="attrreader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="linereader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tsreader.demo.cpp">
@@ -33,6 +39,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="m3u8.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tokenreader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="uriresolve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
