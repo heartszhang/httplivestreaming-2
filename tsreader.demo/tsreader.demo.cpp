@@ -110,8 +110,8 @@ struct Lock {
 using namespace m3u8;
 HRESULT tmain_imp( int argc, _TCHAR* argv[] ) {
   argc; argv;
-  auto reader = new buffer_reader( medialist_sample );
-  auto r = decode_playlist(reader);
+  auto reader = new buffer_reader( masterlist_sample );
+  auto r = decode_playlist(reader, L"http://www.sample/s.m3u8");
   r;
   delete reader;
   return S_OK;

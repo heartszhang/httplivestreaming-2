@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "attrreader.h"
+#include <sstream>
 inline bool is_name_char( char c ) {
   return ( c >= 'A'&&c <= 'Z' ) || c == '-';
 }
@@ -12,11 +13,11 @@ struct attrlist_reader {
   int err = 0;                        //-1:eof, 0: ok, other: failed
   int begin = 0;
   const utf8string &line;
-  utf8string attrname() { //[A..Z-]
-    utf8string n;
-    if ( err != 0 ) return n;
-    for ( ; begin < line.size() && is_name_char( line[ begin ] ); ++begin );
-    return n;
+  utf8string attrname() { //[A..Z-]    
+    if ( err != 0 ) return utf8string();
+    auto p = begin;
+    for ( ; begin < line.size() && is_name_char(line[begin]); ++begin ) {}
+    return line.substr( p, begin - p );    
   }
   explicit attrlist_reader( utf8string const&line ) :line( line ) {}
   void expect_eq() {
@@ -32,44 +33,35 @@ struct attrlist_reader {
     else if ( begin < line.size() )
       err = -4;
   }
-  utf8string attrvalue() {
-    utf8string v;
-    if ( err != 0 ) return v;
+  utf8string attrvalue() {    
+    if ( err != 0 ) return utf8string();
     if ( line[ begin ] == '"' )
-      return string_value();
-    for ( ; begin < line.size() && line[ begin ] != ','; ++begin ) {
-      v.push_back( line[ begin ] );
-    }
-    return v;
+      return dequote();
+    auto p = begin;
+    for ( ; begin < line.size() && line[ begin ] != ','; ++begin ) {}
+    return line.substr( p, begin -p );    
   }
-  utf8string string_value() {
-    utf8string v;
+  utf8string dequote() {
+    std::ostringstream os;
     ++begin;  //ignore the first "
-    auto x = false;
-    for ( ; begin < line.size(); ++begin ) {
-      auto c = line[ begin ];
-      if ( x == true ) {
-        if ( c == 'r' )
-          v.push_back( '\r' );
-        else if ( c == 'n' )
-          v.push_back( '\n' );
-        else v.push_back( line[ begin ] );
-        x = false;
-        continue;
-      }
-      if ( c == '\\' ) {
-        x = true;
-        continue;
-      }
+    for ( auto c = line[begin]; begin < line.size(); ++begin ) {
       if ( c == '"' ) {
+        ++begin;
         break;
       }
-      v.push_back( line[ begin ] );
+      if ( c == '\\' ) {
+        if ( ++begin >= line.size() )
+          break;
+        switch (c = line[ begin ]) {
+        case 'r': c = '\r'; break;
+        case 'n': c = '\n'; break;
+        default:break;
+        }
+      }
+      os << c;
+
     }
-    if ( begin >= line.size() || line[ begin ] != '"' )
-      err = -3;
-    ++begin;
-    return v;
+    return os.str();
   }
 private:
   attrlist_reader operator=( const attrlist_reader& ) = delete;

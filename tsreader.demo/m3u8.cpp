@@ -51,8 +51,8 @@ std::tuple<uint64, uint64> as_resolution( params_t const&, utf8string const&key 
 utf8string                 as_string( params_t const&,utf8string const& key);
 utf8string                 as_enum( params_t const&, utf8string const&key, utf8string const&dft );
 
-void           media_playlist_ctor( m3u8stack &ctx );
-void           master_playlist_ctor( m3u8stack &ctx );
+void           media_playlist_ctor( m3u8stack &ctx , std::wstring const&uri);
+void           master_playlist_ctor( m3u8stack &ctx , std::wstring const&uri);
 media_segment  make_segment( m3u8stack &ctx, utf8string const&url );  // apply extinf
 media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url);  // apply ext-x-stream-inf
 
@@ -103,14 +103,15 @@ void assure(bool exp) {
   exp;
 }
 
-master_playlist m3u8::decode_playlist( line_reader*reader ) {
+master_playlist m3u8::decode_playlist( line_reader*reader , const std::wstring &uri) {
   const char *t = nullptr;
   m3u8stack ctx;
+  ctx.uri = uri;
   auto err = 0;
   auto line = trim(reader->read_line( &err ));
   while ( err >= 0 && ctx.error == 0 ) {
-    if ( line.empty() )continue;
-    if ( line == "#EXTM3U" ) {
+    if ( line.empty() ) {
+    } else if ( line == "#EXTM3U" ) {
       ctx.m3u8 = true;
     } else if ( has_prefix( line, t = "#EXTINF:" ) ) {//#EXTINF:<duration>,<title>
       ctx.is_media_list = true;
@@ -181,9 +182,9 @@ master_playlist m3u8::decode_playlist( line_reader*reader ) {
   if ( err != -1 ) {  // -1: end of stream
     ctx.error = ctx.master_playlist.error = err;
   }
-  master_playlist_ctor( ctx );
+  master_playlist_ctor( ctx ,uri);
   if ( ctx.is_media_list ) {
-    media_playlist_ctor( ctx );
+    media_playlist_ctor( ctx ,uri);
     ctx.master_playlist.medias.push_back( ctx.media_playlist );
   }
 
@@ -243,22 +244,27 @@ media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url) {
   return v;
 }
 
-void media_playlist_ctor(m3u8stack &ctx) {
+void media_playlist_ctor(m3u8stack &ctx, const std::wstring &uri) {
   auto &mp = ctx.media_playlist;
-  mp.closed = ctx.end_list;
   mp.target_duration = ctx.target_duration;
   mp.allow_cache = ctx.allow_cache;
   mp.key_method = utf82unicode( as_enum( ctx.key, "METHDO", "NONE" ) );
   mp.key_uri = utf82unicode( as_string( ctx.key, "URI" ) );
   mp.key_iv = utf82unicode( as_string( ctx.key, "IV" ) );  //128-bit hexadecimal
   mp.closed = ctx.end_list;
-//  mp.seqno = ctx.media_sequence;
+  mp.uri = uri;
+//  mp.seqno = ctx.media_sequence;  // next seq-no
 }
 
-void master_playlist_ctor( m3u8stack &ctx ) {
+void master_playlist_ctor( m3u8stack &ctx , const std::wstring &uri) {
   auto &mp = ctx.master_playlist;
-  if ( !ctx.m3u8 )
+  mp.error = ctx.error;    
+  if ( mp.error == 0 && !ctx.m3u8 )
     mp.error = -4;
+  mp.ver = ctx.ver;
+  mp.uri = uri;
+  mp.duration = ctx.duration;  
+
   //EXT-X-KEY shouldn't exist here
 
   // todo: #EXT-X-MEDIA:TYPE, i dont know how to process x-media
@@ -303,7 +309,7 @@ std::vector<utf8string> string_split(utf8string const&line, char sep){
 
 string utf82unicode(utf8string const&s){
   std::vector<wchar_t> buf(s.size() + 1);
-  auto r = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED| MB_USEGLYPHCHARS, s.c_str(), -1, &buf[0], static_cast<int>(buf.size()));
+  auto r = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), &buf[0], static_cast<int>(buf.size()));
   return string(&buf[0], r);
 }
 

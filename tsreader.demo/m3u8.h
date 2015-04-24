@@ -15,12 +15,10 @@ using params_t = std::map < utf8string, utf8string > ;
 // Media segment may be encrypted.
 struct media_segment {
   bool   allow_cache = true;
-  uint64 seqno;
+  uint64 seqno = 0;
   string title;// optional second parameter for EXTINF tag
   string uri;  //absolute
   uint64 duration;        //nano-secs        // first parameter for EXTINF tag, integer or float
-  uint64  limit = 0-1ull; // EXT-X-BYTERANGE <n> is length in bytes for the file under URI
-  uint64  offset = 0;     // EXT-X-BYTERANGE [@o] is offset from the start of the file under URI
   uint64  byte_range_n = 0;
   uint64  byte_range_offset = 0;
   params_t key;            // EXT-X-KEY displayed before the segment and means changing of encryption key (in theory each segment may have own key)
@@ -29,22 +27,20 @@ struct media_segment {
 };
 
 struct media_playlist{
-  uint64   duration;  //second -> 100nano-secs
-  uint64   target_duration;  // 100 nano-secs
-  uint64   seqno;     //EXT-X-MEDIA-SEQUENCE
-  bool     iframe;    // EXT-X-I-FRAMES-ONLY
-  bool     vod;       // vod or live else
-  bool     has_key;
-  bool     has_map;
+  uint64   duration = 0;  //second -> 100nano-secs
+  uint64   target_duration = 0;  // 100 nano-secs
+//  uint64   seqno = 0;     //EXT-X-MEDIA-SEQUENCE
+  bool     iframe = false;    // EXT-X-I-FRAMES-ONLY
+  bool     vod = true;       // vod or live else
   bool     allow_cache = true;
-  bool     closed = true;//HAS ext-x-endlist
-  uint     winsize;   // max number of segments displayed in an encoded playlist; need set to zero for VOD playlists
-  uint     count;     // number of segments added to the playlist
-  uint     ver;       // 
-  uint64    resolution_x;
-  uint64    resolution_y;
-  uint64    bandwidth;  //bps
-  uint64    program_id;
+  bool     closed = false;//HAS ext-x-endlist
+  uint     winsize = 0;   // max number of segments displayed in an encoded playlist; need set to zero for VOD playlists
+  uint     count = 0;     // number of segments added to the playlist
+  uint     ver = 3;       // 
+  uint64    resolution_x = 0;
+  uint64    resolution_y = 0;
+  uint64    bandwidth = 0;  //bps
+  uint64    program_id = 1;
   string    key_method;
   string    key_uri;
   string    key_iv;
@@ -59,12 +55,12 @@ struct media_playlist{
 };
 
  struct master_playlist{
-   uint64     ver;
+   uint64     ver = 3;
    string     uri;
-   uint64     duration;
+   uint64     duration = 0;
    int        error = 0;
    std::vector<media_playlist> medias;
  };
- master_playlist decode_playlist( line_reader*reader );
+ master_playlist decode_playlist( line_reader*reader , const std::wstring &uri);
  
 }

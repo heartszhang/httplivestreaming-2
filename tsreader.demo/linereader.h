@@ -12,13 +12,15 @@ public:
   virtual ~buffer_reader() {}
   std::string read_line(int *err) override{
     std::string v;
+    if ( data[ current ] == 0 ) {
+      *err = -1;
+      return v;
+    }
     while ( data[current] && data[current]!='\r' && data[current] != '\n') {
       v.push_back( data[ current ] );
       ++current;
     }
     while ( data[ current ] == '\r' || data[ current ] == '\n' )++current;
-    if ( data[ current ] == 0 )
-      *err = -1;
     return v;
   }
 
