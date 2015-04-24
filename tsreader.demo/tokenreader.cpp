@@ -44,11 +44,7 @@ struct attrlist_reader {
   utf8string dequote() {
     std::ostringstream os;
     ++begin;  //ignore the first "
-    for ( auto c = line[begin]; begin < line.size(); ++begin ) {
-      if ( c == '"' ) {
-        ++begin;
-        break;
-      }
+    for ( char c = 0; begin < line.size() && (c = line[begin]) != '"'; ++begin ) {
       if ( c == '\\' ) {
         if ( ++begin >= line.size() )
           break;
@@ -59,7 +55,6 @@ struct attrlist_reader {
         }
       }
       os << c;
-
     }
     return os.str();
   }

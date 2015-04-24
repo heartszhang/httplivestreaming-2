@@ -50,7 +50,7 @@ struct media_playlist{
   params_t  key;       // EXT-X-KEY is optional encryption key displayed before any segments (default key for the playlist)
   string   uri;  //absolute
   string    title;
-  utf8string playlist_type = "VOD";//VOD, EVENT
+  utf8string playlist_type ;//VOD, EVENT
   std::vector<media_segment> segments;
 };
 

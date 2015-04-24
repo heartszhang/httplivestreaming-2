@@ -51,8 +51,8 @@ std::tuple<uint64, uint64> as_resolution( params_t const&, utf8string const&key 
 utf8string                 as_string( params_t const&,utf8string const& key);
 utf8string                 as_enum( params_t const&, utf8string const&key, utf8string const&dft );
 
-void           media_playlist_ctor( m3u8stack &ctx , std::wstring const&uri);
-void           master_playlist_ctor( m3u8stack &ctx , std::wstring const&uri);
+void           media_playlist_ctor( m3u8stack &ctx );
+void           master_playlist_ctor( m3u8stack &ctx );
 media_segment  make_segment( m3u8stack &ctx, utf8string const&url );  // apply extinf
 media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url);  // apply ext-x-stream-inf
 
@@ -182,9 +182,9 @@ master_playlist m3u8::decode_playlist( line_reader*reader , const std::wstring &
   if ( err != -1 ) {  // -1: end of stream
     ctx.error = ctx.master_playlist.error = err;
   }
-  master_playlist_ctor( ctx ,uri);
+  master_playlist_ctor( ctx );
   if ( ctx.is_media_list ) {
-    media_playlist_ctor( ctx ,uri);
+    media_playlist_ctor( ctx );
     ctx.master_playlist.medias.push_back( ctx.media_playlist );
   }
 
@@ -244,7 +244,7 @@ media_playlist make_media_playlist(m3u8stack &ctx, utf8string const&url) {
   return v;
 }
 
-void media_playlist_ctor(m3u8stack &ctx, const std::wstring &uri) {
+void media_playlist_ctor(m3u8stack &ctx) {
   auto &mp = ctx.media_playlist;
   mp.target_duration = ctx.target_duration;
   mp.allow_cache = ctx.allow_cache;
@@ -252,17 +252,17 @@ void media_playlist_ctor(m3u8stack &ctx, const std::wstring &uri) {
   mp.key_uri = utf82unicode( as_string( ctx.key, "URI" ) );
   mp.key_iv = utf82unicode( as_string( ctx.key, "IV" ) );  //128-bit hexadecimal
   mp.closed = ctx.end_list;
-  mp.uri = uri;
+  mp.uri = ctx.uri;
 //  mp.seqno = ctx.media_sequence;  // next seq-no
 }
 
-void master_playlist_ctor( m3u8stack &ctx , const std::wstring &uri) {
+void master_playlist_ctor( m3u8stack &ctx ) {
   auto &mp = ctx.master_playlist;
   mp.error = ctx.error;    
   if ( mp.error == 0 && !ctx.m3u8 )
     mp.error = -4;
   mp.ver = ctx.ver;
-  mp.uri = uri;
+  mp.uri = ctx.uri;
   mp.duration = ctx.duration;  
 
   //EXT-X-KEY shouldn't exist here
