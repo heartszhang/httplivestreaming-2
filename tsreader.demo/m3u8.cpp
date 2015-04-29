@@ -308,9 +308,9 @@ std::vector<utf8string> string_split(utf8string const&line, char sep){
 }
 
 string utf82unicode(utf8string const&s){
-  std::vector<wchar_t> buf(s.size() + 1);
-  auto r = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), &buf[0], static_cast<int>(buf.size()));
-  return string(&buf[0], r);
+  std::vector<wchar_t> buf(s.size());
+  auto r = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), buf.data(), static_cast<int>(buf.size()));
+  return string(buf.data(), r);
 }
 
 bool has_prefix(utf8string const&s, utf8string const&prefix){
