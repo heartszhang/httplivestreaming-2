@@ -5,7 +5,7 @@
 #if 0
 extern "C" __declspec( dllexport ) BOOL WINAPI DllMain( _In_opt_ HINSTANCE, DWORD, _In_opt_ LPVOID );
 extern "C" HRESULT WINAPI DllCanUnloadNow();  // __declspec(dllexport) will result redifination error
-extern "C" __declspec( dllexport ) HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING, _Deref_out_ IActivationFactory** );
+extern "C" HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING, _Deref_out_ IActivationFactory** );
 extern "C" HRESULT WINAPI DllGetClassObject( REFCLSID, REFIID, _Deref_out_ LPVOID* );
 
 
@@ -27,7 +27,7 @@ extern "C" HRESULT WINAPI DllCanUnloadNow() {
   return module.GetObjectCount() == 0 ? S_OK : S_FALSE;
 }
 
-extern "C" __declspec( dllexport ) HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING activatibleClassId, _Deref_out_ IActivationFactory** factory ) {
+extern "C" HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING activatibleClassId, _Deref_out_ IActivationFactory** factory ) {
   auto &module = Microsoft::WRL::Module<Microsoft::WRL::InProc>::GetModule();
   return module.GetActivationFactory( activatibleClassId, factory );
 }
@@ -39,8 +39,10 @@ extern "C" HRESULT WINAPI DllGetClassObject( _In_ REFCLSID rclsid, _In_ REFIID r
 #if defined(_M_IX86)
 #pragma comment(linker, "/EXPORT:DllCanUnloadNow=_DllCanUnloadNow@0,PRIVATE")
 #pragma comment(linker, "/EXPORT:DllGetClassObject=_DllGetClassObject@12,PRIVATE")
+#pragma comment(linker, "/EXPORT:DllGetActivationFactory=_DllGetActivationFactory@8,PRIVATE")
 #elif defined(_M_ARM) || defined(_M_AMD64)
 #pragma comment(linker, "/EXPORT:DllCanUnloadNow,PRIVATE")
 #pragma comment(linker, "/EXPORT:DllGetClassObject,PRIVATE")
+#pragma comment(linker, "/EXPORT:DllGetActivationFactory,PRIVATE")
 #endif
 #endif
