@@ -258,12 +258,12 @@ void media_playlist_ctor(m3u8stack &ctx) {
 
 void master_playlist_ctor( m3u8stack &ctx ) {
   auto &mp = ctx.master_playlist;
-  mp.error = ctx.error;    
+  mp.error = ctx.error;
   if ( mp.error == 0 && !ctx.m3u8 )
     mp.error = -4;
   mp.ver = ctx.ver;
   mp.uri = ctx.uri;
-  mp.duration = ctx.duration;  
+  mp.duration = ctx.duration;
 
   //EXT-X-KEY shouldn't exist here
 
@@ -282,18 +282,16 @@ utf8string suffix_trim(utf8string &s, utf8string const&prefix){
 bool is_not_space(char const&c){
   return !(c == ' ' || c == '\t');
 }
-utf8string ltrim(utf8string const&s){
-  auto v = s;
+utf8string ltrim(utf8string v){
   v.erase(v.begin(), std::find_if(v.begin(), v.end(), is_not_space));
-  return v;
+  return std::move(v);
 }
-utf8string rtrim(utf8string const&s){
-  auto v = s;
+utf8string rtrim(utf8string v){
   v.erase((std::find_if(v.rbegin(), v.rend(), is_not_space)).base(), v.end());
-  return v;
+  return std::move(v);
 }
 
-utf8string trim(utf8string const&s){
+utf8string trim(utf8string s){
   return rtrim(ltrim(s));
 }
 
