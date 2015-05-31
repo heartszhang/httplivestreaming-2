@@ -24,7 +24,7 @@ struct m3u8stack {
   uint64                program_datetime      = 0; //unixtime64
   uint64                ver                   = 3;
   string                inf_title;
-  utf8string            playlist_type ="VOD"; // "" = VOD, EVENT = LIVE,
+  string                playlist_type = L"VOD"; // "" = VOD, EVENT = LIVE,
   string                uri;
   std::vector<params_t> medias;
   ::media_playlist      media_playlist;
@@ -139,7 +139,7 @@ master_playlist m3u8::decode_playlist( line_reader*reader , const std::wstring &
     } else if ( has_prefix( line, t = "#EXT-X-ALLOW-CACHE:" ) ) {// #EXT-X-ALLOW-CACHE:<YES|NO>
       ctx.allow_cache = decode_yesno( suffix_trim( line, t ) );
     } else if ( has_prefix( line, t = "#EXT-X-PLAYLIST-TYPE:" ) ) {
-      ctx.playlist_type = trim( suffix_trim( line, t ) );
+      ctx.playlist_type = utf82unicode(trim( suffix_trim( line, t ) ));
     } else if ( has_prefix( line, t = "#EXT-X-ENDLIST" ) ) {
       ctx.is_media_list = true;
       ctx.end_list = true; // media-playlist
@@ -164,7 +164,7 @@ master_playlist m3u8::decode_playlist( line_reader*reader , const std::wstring &
       //segment
       //media-playlist
       if ( ctx.is_media_list ) {
-        auto p = make_segment( ctx, line );
+        auto p = make_segment( ctx, line);
         ctx.media_playlist.segments.push_back( p );
         ctx.media_sequence++;
       }
@@ -218,7 +218,7 @@ media_segment make_segment(m3u8stack &ctx, utf8string const&url) {
   if ( v.uri.empty() )
     ctx.error = -2;  // just a magic number
   v.duration = ctx.inf_duration;
-  v.seqno = ctx.media_sequence;
+  v.seqno = ctx.media_sequence ;
   v.title = ctx.inf_title;
   v.discontinuity = ctx.discontinuity;
   v.allow_cache = ctx.allow_cache;
@@ -253,7 +253,8 @@ void media_playlist_ctor(m3u8stack &ctx) {
   mp.key_iv = utf82unicode( as_string( ctx.key, "IV" ) );  //128-bit hexadecimal
   mp.closed = ctx.end_list;
   mp.uri = ctx.uri;
-//  mp.seqno = ctx.media_sequence;  // next seq-no
+  mp.seqno = ctx.media_sequence;  // next seq-no
+  mp.playlist_type = ctx.playlist_type;
 }
 
 void master_playlist_ctor( m3u8stack &ctx ) {
@@ -264,7 +265,6 @@ void master_playlist_ctor( m3u8stack &ctx ) {
   mp.ver = ctx.ver;
   mp.uri = ctx.uri;
   mp.duration = ctx.duration;
-
   //EXT-X-KEY shouldn't exist here
 
   // todo: #EXT-X-MEDIA:TYPE, i dont know how to process x-media
@@ -291,7 +291,7 @@ utf8string rtrim(utf8string v){
   return std::move(v);
 }
 
-utf8string trim(utf8string s){
+utf8string trim(utf8string const&s){
   return rtrim(ltrim(s));
 }
 

@@ -47,5 +47,8 @@
     <ClCompile Include="uriresolve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dump.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

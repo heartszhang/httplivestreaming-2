@@ -107,12 +107,38 @@ struct Lock {
   Lock() { OutputDebugStringW( L"enter Lock::ctor\n" ); }
   ~Lock() { OutputDebugStringW( L"exit Lock::dtor\n" ); }
 };
+void dump( const wchar_t*fmt, ... );
 using namespace m3u8;
+
+void dump_segment( media_segment const&seg ) {
+  dump( L"seq: %d, uri: %s\n", seg.seqno, seg.uri.c_str() );
+}
+void dump_playlist(media_playlist const&pl) {
+  dump( L"playlist allo-cache:%d, bandwidth: %lld, closed: %d, codec: %s, x: %d, y: %d, du: %d, seq: %d, uri: %s\n"
+        , pl.allow_cache
+        , pl.bandwidth
+        , pl.closed
+        , pl.codec.c_str()
+        , pl.resolution_x
+        , pl.resolution_y
+        , pl.duration, pl.seqno, pl.uri.c_str());
+  for ( auto seg : pl.segments ) {
+    dump_segment( seg );
+  }
+}
+void dump_master_playlist(master_playlist const&mp) {
+  dump( L"master-playlist du: %llu\n", mp.duration );
+  dump( L"master-playlist url: %s\n", mp.uri.c_str() );
+  dump( L"master-playlist ver: %d\n", mp.ver );
+  for ( auto playlist : mp.medias ) {
+    dump_playlist( playlist );
+  }
+}
 HRESULT tmain_imp( int argc, _TCHAR* argv[] ) {
   argc; argv;
-  auto reader = new buffer_reader( masterlist_sample );
+  auto reader = new utf8_text_reader( live_sample );
   auto r = decode_playlist(reader, L"http://www.sample/s.m3u8");
-  r;
+  dump_master_playlist(r);
   delete reader;
   return S_OK;
 }
